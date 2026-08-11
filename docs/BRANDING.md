@@ -14,15 +14,17 @@ The visual system is intentionally unrelated to Pathbuilder/Pathfinder trade dre
 - original rune/compass sigil instead of PF/P2/d20 monograms;
 - geometric/grid backgrounds instead of fantasy illustration banners;
 - baked-in home labels are Russian and use a modern utility-card layout;
-- generic action notation `1 / 2 / 3 / R / F` instead of inherited action glyph artwork;
+- project-owned action language: one/two/three cyan diamond pips for action cost, a circular-arrow diamond for reaction, and a hollow radiant diamond for a free action;
 - inherited light-theme parchment, red braces and scroll ornament are replaced by neutral project-owned assets;
 - no Paizo/Pathfinder/Pathbuilder logos or official art.
+
+The old temporary `1 / 2 / 3 / R / F` badges were removed in `0.3.0-alpha.3`; they looked like developer placeholders rather than product UI.
 
 ## Android identity
 
 - application ID: `com.pf2ebuilder.ru.builderx` (temporary transition ID; kept for safe in-place updates)
 - display name: `RuneSheet RU`
-- current transition version: `0.3.0-alpha.2`
+- current transition version: `0.3.0-alpha.3`
 
 The transition ID is intentionally kept stable to avoid risky DEX string-table relocation. The visible product identity is RuneSheet RU; a clean package ID belongs to the native codebase, where it can be changed without binary patching.
 
