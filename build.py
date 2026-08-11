@@ -9,37 +9,14 @@ from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
 from product_components import patch_activity_main
-from milestone_components import (
-    BUTTON_LAYOUTS,
-    ICON_NAMES,
-    harden_manifest_privacy,
-    patch_button_layout,
-    patch_nav_header,
-    patch_subheader,
-    recolor_icon,
-)
+from milestone_components import BUTTON_LAYOUTS,ICON_NAMES,harden_manifest_privacy,patch_button_layout,patch_nav_header,patch_subheader,recolor_icon
 from antique_theme_gold import (
-    BADGE_FILL,
-    BRASS_DARK,
-    BRASS_LIGHT,
-    SELECTED_DARK,
-    patch_button_antique,
-    patch_level_layout_antique,
-    patch_nav_header_antique,
-    patch_shape_antique,
-    patch_subheader_antique,
-    patch_topnav_antique,
-    recolor_icon_antique,
-    restyle_generated_brand_antique,
+    APP_ROUND_DRAWABLES,BADGE_FILL,BRASS_DARK,BRASS_LIGHT,SELECTED_DARK,
+    patch_button_antique,patch_direct_legacy_product_colors,patch_level_layout_antique,
+    patch_nav_header_antique,patch_product_color_table,patch_rounding,patch_shape_antique,
+    patch_subheader_antique,patch_topnav_antique,recolor_icon_antique,restyle_generated_brand_antique,
 )
-from reskin_patch import (
-    FRONTPAGE_LAYOUTS,
-    patch_frontpage_layout,
-    patch_level_layout,
-    patch_play_navigation,
-    patch_build_navigation,
-    patch_topnav_slider,
-)
+from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_play_navigation,patch_build_navigation,patch_topnav_slider
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
 
@@ -60,21 +37,19 @@ def main():
     if got!=cfg['base_apk_sha256'] and not args.allow_base_mismatch:
         raise SystemExit(f'Base APK SHA-256 mismatch. Expected {cfg["base_apk_sha256"]}, got {got}')
     pw=os.environ.get('PF2E_KEYSTORE_PASSWORD')
-    if not pw: raise SystemExit('Set PF2E_KEYSTORE_PASSWORD; the signing key/password are intentionally not stored in Git.')
+    if not pw: raise SystemExit('Set PF2E_KEYSTORE_PASSWORD; signing key/password are not stored in Git.')
     args.out.parent.mkdir(parents=True,exist_ok=True)
     work=ROOT/'work'; work.mkdir(exist_ok=True)
     brand=work/'branding'
     if brand.exists():
         import shutil; shutil.rmtree(brand)
-    generate_brand_assets(brand)
-    generate_action_assets(brand)
-    # Warm antique-book identity; generated product art only, never rule/content images.
-    restyle_generated_brand_antique(brand)
+    generate_brand_assets(brand); generate_action_assets(brand); restyle_generated_brand_antique(brand)
 
     with zipfile.ZipFile(args.base) as z:
         names=set(z.namelist())
         manifest=z.read('AndroidManifest.xml'); arsc=z.read('resources.arsc'); c2=z.read('classes2.dex')
         resource_overrides={}
+
         for path in FRONTPAGE_LAYOUTS:
             if path in names: resource_overrides[path]=patch_frontpage_layout(z.read(path))
         if 'res/layout/layout_level_navigation.xml' in names:
@@ -90,56 +65,62 @@ def main():
         if 'res/layout/activity_main.xml' in names:
             resource_overrides['res/layout/activity_main.xml']=patch_activity_main(z.read('res/layout/activity_main.xml'))
 
-        # Surface + every label are migrated together to prevent invisible text.
+        # Contained components: surface + label are always migrated together.
         for path in sorted(BUTTON_LAYOUTS):
-            if path in names:
-                resource_overrides[path]=patch_button_layout(z.read(path))
+            if path in names: resource_overrides[path]=patch_button_layout(z.read(path))
         if 'res/layout/nav_header_main.xml' in names:
             resource_overrides['res/layout/nav_header_main.xml']=patch_nav_header(z.read('res/layout/nav_header_main.xml'))
         if 'res/layout/text_view_subheader.xml' in names:
             resource_overrides['res/layout/text_view_subheader.xml']=patch_subheader(z.read('res/layout/text_view_subheader.xml'))
         for name in sorted(ICON_NAMES):
             path='res/drawable/'+name
-            if path in names:
-                resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
+            if path in names: resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
 
-        # Bright antique overlay: no burgundy. Honey-gold menu surfaces with dark ink.
+        # Antique overlay: bright bronze/honey, no product burgundy.
         for path in sorted(BUTTON_LAYOUTS):
-            if path in resource_overrides:
-                resource_overrides[path]=patch_button_antique(resource_overrides[path])
+            if path in resource_overrides: resource_overrides[path]=patch_button_antique(resource_overrides[path])
         if 'res/layout/nav_header_main.xml' in resource_overrides:
             resource_overrides['res/layout/nav_header_main.xml']=patch_nav_header_antique(resource_overrides['res/layout/nav_header_main.xml'])
         if 'res/layout/text_view_subheader.xml' in resource_overrides:
             resource_overrides['res/layout/text_view_subheader.xml']=patch_subheader_antique(resource_overrides['res/layout/text_view_subheader.xml'])
         for path in ('res/layout/activity_content_play_mode.xml','res/layout/totalfragment_build_navigation.xml'):
-            if path in resource_overrides:
-                resource_overrides[path]=patch_topnav_antique(resource_overrides[path])
+            if path in resource_overrides: resource_overrides[path]=patch_topnav_antique(resource_overrides[path])
         for name in sorted(ICON_NAMES):
             path='res/drawable/'+name
-            if path in resource_overrides:
-                resource_overrides[path]=recolor_icon_antique(resource_overrides[path])
+            if path in resource_overrides: resource_overrides[path]=recolor_icon_antique(resource_overrides[path])
 
-        # Russian УРОВЕНЬ N: wrap_content + padding + direct black text + framed badge.
+        # Level chips: remove inherited play style, force known-black resource, wrap content.
         if 'res/layout/layout_level_navigation.xml' in resource_overrides:
             resource_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation.xml'],play=False)
         if 'res/layout/layout_level_navigation_play.xml' in resource_overrides:
             resource_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation_play.xml'],play=True)
         if 'res/drawable/background_topnav_slider.xml' in resource_overrides:
             base_slider=z.read('res/drawable/background_topnav_slider.xml')
-            resource_overrides['res/drawable/background_topnav_slider.xml']=patch_shape_antique(base_slider,fill=SELECTED_DARK,stroke=BRASS_LIGHT,radius_dp=10)
-            resource_overrides['res/drawable/test_level_drawable.xml']=patch_shape_antique(base_slider,fill=BADGE_FILL,stroke=BRASS_DARK,radius_dp=8)
+            resource_overrides['res/drawable/background_topnav_slider.xml']=patch_shape_antique(base_slider,fill=SELECTED_DARK,stroke=BRASS_LIGHT,radius_dp=18)
+            resource_overrides['res/drawable/test_level_drawable.xml']=patch_shape_antique(base_slider,fill=BADGE_FILL,stroke=BRASS_DARK,radius_dp=22)
 
-    manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
+        # Remove exact legacy product-red literals from all compiled app XML.
+        for path in sorted(n for n in names if n.endswith('.xml')):
+            src=resource_overrides.get(path,z.read(path))
+            patched=patch_direct_legacy_product_colors(src)
+            if patched!=z.read(path) or path in resource_overrides:
+                resource_overrides[path]=patched
+
+        # Less-square UI: radius-only changes on app-specific drawable shapes.
+        for path,radius in APP_ROUND_DRAWABLES.items():
+            if path in names:
+                resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
+
+    manifest=patch_manifest(manifest,app_name=cfg['app_name'],application_id=cfg['application_id'],version_name=cfg['version_name'],version_code=cfg['version_code'],file_provider_authority=cfg['file_provider_authority'])
     manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
 
+    # Product-name change + precise product palette replacement. Material/error palettes remain untouched.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
+    arsc=patch_product_color_table(arsc)
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
-    repl={
-        old:new,
-        f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',
-        old+'.provider':cfg['file_provider_authority'],
-    }
+    repl={old:new,f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',old+'.provider':cfg['file_provider_authority']}
     c2=patch_exact_strings(c2,repl)
+
     overrides={'AndroidManifest.xml':manifest,'resources.arsc':arsc,'classes2.dex':c2}
     overrides.update(resource_overrides)
     for p in brand.rglob('*'):
