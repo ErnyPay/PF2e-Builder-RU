@@ -2,32 +2,45 @@
 
 This document is project hygiene, not legal advice.
 
-## Upstream application
+## RuneSheet RU transition build
 
-Pathbuilder 2e is distributed by Redrazors Ltd. This repository does not assume that possession of an APK grants permission to redistribute its proprietary application code or artwork. Therefore upstream APKs, extracted DEX files, decrypted databases and original assets are excluded from Git.
+`RuneSheet RU` is the public-facing visual identity of the temporary transition build. The transition APK deliberately avoids using Pathbuilder/Pathfinder/Paizo as its product name and replaces inherited launch art, parchment/ornament assets and action glyph artwork with project-owned generated resources.
 
-Before publishing a modified APK to GitHub Releases or an app store, obtain permission or replace upstream proprietary components with our own implementation / otherwise lawfully redistributable components.
+That visual differentiation is only a branding step. It does **not** grant redistribution rights to inherited application code, databases or third-party assets. Do not treat a reskinned APK as independently licensed software.
+
+Pathbuilder 2e is distributed by Redrazors Ltd. This repository does not assume that possession of an APK grants permission to redistribute its application code or artwork. Therefore upstream APKs, extracted DEX files, decrypted databases and original assets are excluded from Git.
+
+Before publishing a modified transition APK to GitHub Releases or an app store, independently verify rights to redistribute/modify the inherited binary code or replace those components with our own implementation / otherwise lawfully redistributable components.
 
 ## Pathfinder / Paizo content
 
-Paizo publishes different categories of material under different policies/licenses. In particular:
+Paizo uses several different policies and licenses for different material:
 
-- ORC covers designated Licensed Material (game-rules content), not trademarks or Reserved Material;
-- Paizo's Community Use Policy permits certain freely available non-commercial uses subject to its conditions and required notice;
-- Paizo's Compatibility License FAQ says the compatibility license itself is not available for apps and distinguishes game-content licenses from trademark rights.
-
-Because an app can combine rules, names, setting material, translations and artwork from different sources, each data source needs provenance and an applicable license/permission.
+- ORC can cover designated rules material, but does not grant rights to Paizo trademarks or Reserved Material;
+- Paizo's reinstated Community Use Policy permits certain non-commercial uses subject to its conditions, but does not replace the licenses needed for game-rules products;
+- Paizo's Fan Content Policy explicitly treats character builders/rules databases as RPG products and says those products are not publishable under that policy;
+- therefore rules content, trademarks, setting material, translations and artwork must each have a clear provenance and applicable license/permission.
 
 Official references:
 
 - https://paizo.com/licenses
-- https://paizo.com/orclicense
 - https://paizo.com/licenses/communityuse
-- https://paizo.com/licenses/compatibility/faq
+- https://paizo.com/licenses/fancontent/
+- https://paizo.com/licenses/fancontent/faq
 
-## Project naming
+## Branding / trade dress
 
-The project uses `PF2e Builder RU` rather than the full `Pathfinder` mark. Do not add Paizo/Pathfinder logos or imply endorsement without a license that permits it.
+The transition product identity is **RuneSheet RU**. Do not use Pathbuilder, Paizo or Pathfinder logos as RuneSheet branding, and do not make the UI intentionally imitate their visual presentation. Compatibility references should be descriptive and separated from the product name.
+
+The current generated identity uses an original rune/compass sigil, slate/cyan/amber palette, geometric cards, neutral backgrounds and project-owned action notation.
+
+## Inherited services
+
+Before presenting the transition build as an independent public product, remove or replace inherited service identities where technically possible, including upstream ad IDs, billing flows, Firebase/backend configuration, support links and other external endpoints. Do not redirect or impersonate upstream services.
+
+## Native app
+
+The clean `native/` codebase remains the preferred route for a distributable independent product because code ownership, package identity, UI, storage and service dependencies can be controlled directly.
 
 ## Signing key
 
