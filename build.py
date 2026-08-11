@@ -16,12 +16,14 @@ ROOT=Path(__file__).resolve().parent
 def sha256(p:Path): return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
+    cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
+    default_out=ROOT/f"dist/RuneSheet-RU-{cfg['version_name']}.apk"
     ap=argparse.ArgumentParser(description='Build RuneSheet RU transition APK from a locally supplied compatible base APK.')
     ap.add_argument('--base',required=True,type=Path)
     ap.add_argument('--keystore',type=Path,default=ROOT/'.local/pf2e-builder-ru-signing.p12')
-    ap.add_argument('--out',type=Path,default=ROOT/'dist/RuneSheet-RU-0.3.0-alpha.3.apk')
+    ap.add_argument('--out',type=Path,default=default_out)
     ap.add_argument('--allow-base-mismatch',action='store_true')
-    args=ap.parse_args(); cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
+    args=ap.parse_args()
     got=sha256(args.base)
     if got!=cfg['base_apk_sha256'] and not args.allow_base_mismatch:
         raise SystemExit(f'Base APK SHA-256 mismatch. Expected {cfg["base_apk_sha256"]}, got {got}')
@@ -33,7 +35,6 @@ def main():
     if brand.exists():
         import shutil; shutil.rmtree(brand)
     generate_brand_assets(brand)
-    # Overwrite the legacy numeric badges with project-owned action glyphs.
     generate_action_assets(brand)
 
     with zipfile.ZipFile(args.base) as z:
