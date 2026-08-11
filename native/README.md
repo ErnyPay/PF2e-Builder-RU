@@ -16,7 +16,7 @@
 
 - Android Gradle Plugin 9.3.1;
 - Gradle 9.5.0+;
-- compile/target SDK 37;
+- compile/target SDK 36 (временно для доступности стабильного Android SDK пакета в hosted CI; переход на 37 — отдельный безболезненный bump);
 - Kotlin 2.4.10;
 - Compose BOM 2026.06.00;
 - JDK 17+.

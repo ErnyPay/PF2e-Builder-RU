@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.pf2ebuilder.ru"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.pf2ebuilder.ru.builderx"
         minSdk = 23
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 300
         versionName = "0.2.0-dev"
     }

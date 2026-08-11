@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -23,9 +23,13 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Install Android SDK 37
-        run: |
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-37' 'build-tools;36.0.0'
+      - name: Install Android SDK 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Build native shell
         run: gradle -p native :app:assembleDebug :app:testDebugUnitTest --stacktrace
+      - name: Upload native debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PF2e-Builder-RU-native-debug
+          path: native/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
