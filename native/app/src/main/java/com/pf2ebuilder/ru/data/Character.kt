@@ -12,6 +12,12 @@ data class CharacterRecord(
     val ancestry: String = "",
     val background: String = "",
     val className: String = "",
+    val strength: Int = 0,
+    val dexterity: Int = 0,
+    val constitution: Int = 0,
+    val intelligence: Int = 0,
+    val wisdom: Int = 0,
+    val charisma: Int = 0,
     val notes: String = "",
 ) {
     fun normalized(): CharacterRecord = copy(
@@ -20,13 +26,19 @@ data class CharacterRecord(
         ancestry = ancestry.trim(),
         background = background.trim(),
         className = className.trim(),
+        strength = CharacterValidation.normalizeAttributeModifier(strength),
+        dexterity = CharacterValidation.normalizeAttributeModifier(dexterity),
+        constitution = CharacterValidation.normalizeAttributeModifier(constitution),
+        intelligence = CharacterValidation.normalizeAttributeModifier(intelligence),
+        wisdom = CharacterValidation.normalizeAttributeModifier(wisdom),
+        charisma = CharacterValidation.normalizeAttributeModifier(charisma),
         notes = notes.trim(),
     )
 }
 
 object CharacterJson {
     const val SCHEMA = "pf2e-builder-ru.character"
-    const val VERSION = 1
+    const val VERSION = 2
 
     fun encodeCharacter(character: CharacterRecord): JSONObject {
         val c = character.normalized()
@@ -37,18 +49,37 @@ object CharacterJson {
             .put("ancestry", c.ancestry)
             .put("background", c.background)
             .put("className", c.className)
+            .put(
+                "attributes",
+                JSONObject()
+                    .put("strength", c.strength)
+                    .put("dexterity", c.dexterity)
+                    .put("constitution", c.constitution)
+                    .put("intelligence", c.intelligence)
+                    .put("wisdom", c.wisdom)
+                    .put("charisma", c.charisma),
+            )
             .put("notes", c.notes)
     }
 
-    fun decodeCharacter(json: JSONObject): CharacterRecord = CharacterRecord(
-        id = json.optString("id").ifBlank { UUID.randomUUID().toString() },
-        name = json.optString("name", "Без имени"),
-        level = json.optInt("level", 1),
-        ancestry = json.optString("ancestry"),
-        background = json.optString("background"),
-        className = json.optString("className"),
-        notes = json.optString("notes"),
-    ).normalized()
+    fun decodeCharacter(json: JSONObject, version: Int = VERSION): CharacterRecord {
+        val attributes = if (version >= 2) json.optJSONObject("attributes") else null
+        return CharacterRecord(
+            id = json.optString("id").ifBlank { UUID.randomUUID().toString() },
+            name = json.optString("name", "Без имени"),
+            level = json.optInt("level", 1),
+            ancestry = json.optString("ancestry"),
+            background = json.optString("background"),
+            className = json.optString("className"),
+            strength = attributes?.optInt("strength", 0) ?: 0,
+            dexterity = attributes?.optInt("dexterity", 0) ?: 0,
+            constitution = attributes?.optInt("constitution", 0) ?: 0,
+            intelligence = attributes?.optInt("intelligence", 0) ?: 0,
+            wisdom = attributes?.optInt("wisdom", 0) ?: 0,
+            charisma = attributes?.optInt("charisma", 0) ?: 0,
+            notes = json.optString("notes"),
+        ).normalized()
+    }
 
     fun exportOne(character: CharacterRecord): String = JSONObject()
         .put("schema", SCHEMA)
@@ -59,8 +90,9 @@ object CharacterJson {
     fun importOne(text: String): CharacterRecord {
         val root = JSONObject(text)
         require(root.optString("schema") == SCHEMA) { "Неподдерживаемый формат файла" }
-        require(root.optInt("version") == VERSION) { "Неподдерживаемая версия файла" }
-        return decodeCharacter(root.getJSONObject("character"))
+        val version = root.optInt("version")
+        require(version in 1..VERSION) { "Неподдерживаемая версия файла: $version" }
+        return decodeCharacter(root.getJSONObject("character"), version)
     }
 
     fun encodeCollection(characters: List<CharacterRecord>): String {
@@ -76,10 +108,11 @@ object CharacterJson {
         if (text.isNullOrBlank()) return emptyList()
         return runCatching {
             val root = JSONObject(text)
+            val version = root.optInt("version", 1).coerceIn(1, VERSION)
             val array = root.optJSONArray("characters") ?: JSONArray()
             buildList {
                 for (index in 0 until array.length()) {
-                    add(decodeCharacter(array.getJSONObject(index)))
+                    add(decodeCharacter(array.getJSONObject(index), version))
                 }
             }
         }.getOrDefault(emptyList())

@@ -35,12 +35,13 @@
 - [x] own theme/icon and diagnostics screen;
 - [x] local character list;
 - [x] create/edit/delete basic character record;
-- [x] own versioned JSON character format v1;
+- [x] own versioned JSON character format with v1 -> v2 migration;
 - [x] local JSON export/import;
 - [x] native CI producing a debug APK artifact;
-- [x] own SQLite database + migration from early dev storage;
-- [ ] ability/attribute model and calculations;
+- [x] own SQLite database + explicit v1 -> v2 migration;
+- [x] six PF2e attribute modifiers in owned character model;
 - [ ] ancestry/background/class rules selection from owned rules catalog;
+- [ ] proficiencies/skills and derived calculations;
 - [ ] feats/spells/equipment domain modules;
 - [ ] transition/legacy character migration adapter.
 

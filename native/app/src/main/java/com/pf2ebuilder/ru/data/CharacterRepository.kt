@@ -52,6 +52,12 @@ class CharacterRepository(context: Context) {
             put(COL_ANCESTRY, item.ancestry)
             put(COL_BACKGROUND, item.background)
             put(COL_CLASS, item.className)
+            put(COL_STR, item.strength)
+            put(COL_DEX, item.dexterity)
+            put(COL_CON, item.constitution)
+            put(COL_INT, item.intelligence)
+            put(COL_WIS, item.wisdom)
+            put(COL_CHA, item.charisma)
             put(COL_NOTES, item.notes)
             put(COL_UPDATED_AT, System.currentTimeMillis())
         }
@@ -62,7 +68,10 @@ class CharacterRepository(context: Context) {
         val result = mutableListOf<CharacterRecord>()
         database.readableDatabase.query(
             TABLE,
-            arrayOf(COL_ID, COL_NAME, COL_LEVEL, COL_ANCESTRY, COL_BACKGROUND, COL_CLASS, COL_NOTES),
+            arrayOf(
+                COL_ID, COL_NAME, COL_LEVEL, COL_ANCESTRY, COL_BACKGROUND, COL_CLASS,
+                COL_STR, COL_DEX, COL_CON, COL_INT, COL_WIS, COL_CHA, COL_NOTES,
+            ),
             null,
             null,
             null,
@@ -75,6 +84,12 @@ class CharacterRepository(context: Context) {
             val ancestryIndex = cursor.getColumnIndexOrThrow(COL_ANCESTRY)
             val backgroundIndex = cursor.getColumnIndexOrThrow(COL_BACKGROUND)
             val classIndex = cursor.getColumnIndexOrThrow(COL_CLASS)
+            val strIndex = cursor.getColumnIndexOrThrow(COL_STR)
+            val dexIndex = cursor.getColumnIndexOrThrow(COL_DEX)
+            val conIndex = cursor.getColumnIndexOrThrow(COL_CON)
+            val intIndex = cursor.getColumnIndexOrThrow(COL_INT)
+            val wisIndex = cursor.getColumnIndexOrThrow(COL_WIS)
+            val chaIndex = cursor.getColumnIndexOrThrow(COL_CHA)
             val notesIndex = cursor.getColumnIndexOrThrow(COL_NOTES)
             while (cursor.moveToNext()) {
                 result += CharacterRecord(
@@ -84,6 +99,12 @@ class CharacterRepository(context: Context) {
                     ancestry = cursor.getString(ancestryIndex),
                     background = cursor.getString(backgroundIndex),
                     className = cursor.getString(classIndex),
+                    strength = cursor.getInt(strIndex),
+                    dexterity = cursor.getInt(dexIndex),
+                    constitution = cursor.getInt(conIndex),
+                    intelligence = cursor.getInt(intIndex),
+                    wisdom = cursor.getInt(wisIndex),
+                    charisma = cursor.getInt(chaIndex),
                     notes = cursor.getString(notesIndex),
                 ).normalized()
             }
@@ -118,6 +139,12 @@ class CharacterRepository(context: Context) {
                     $COL_ANCESTRY TEXT NOT NULL DEFAULT '',
                     $COL_BACKGROUND TEXT NOT NULL DEFAULT '',
                     $COL_CLASS TEXT NOT NULL DEFAULT '',
+                    $COL_STR INTEGER NOT NULL DEFAULT 0,
+                    $COL_DEX INTEGER NOT NULL DEFAULT 0,
+                    $COL_CON INTEGER NOT NULL DEFAULT 0,
+                    $COL_INT INTEGER NOT NULL DEFAULT 0,
+                    $COL_WIS INTEGER NOT NULL DEFAULT 0,
+                    $COL_CHA INTEGER NOT NULL DEFAULT 0,
                     $COL_NOTES TEXT NOT NULL DEFAULT '',
                     $COL_UPDATED_AT INTEGER NOT NULL
                 )
@@ -127,16 +154,22 @@ class CharacterRepository(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Explicit migrations will be added here as the owned schema evolves.
-            if (oldVersion != newVersion) {
-                error("Missing PF2e Builder RU character DB migration: $oldVersion -> $newVersion")
+            var version = oldVersion
+            if (version == 1) {
+                listOf(COL_STR, COL_DEX, COL_CON, COL_INT, COL_WIS, COL_CHA).forEach { column ->
+                    db.execSQL("ALTER TABLE $TABLE ADD COLUMN $column INTEGER NOT NULL DEFAULT 0")
+                }
+                version = 2
+            }
+            if (version != newVersion) {
+                error("Missing PF2e Builder RU character DB migration: $oldVersion -> $newVersion (stopped at $version)")
             }
         }
     }
 
     private companion object {
         const val DB_NAME = "pf2e-builder-ru.db"
-        const val DB_VERSION = 1
+        const val DB_VERSION = 2
         const val TABLE = "characters"
         const val COL_ID = "id"
         const val COL_NAME = "name"
@@ -144,6 +177,12 @@ class CharacterRepository(context: Context) {
         const val COL_ANCESTRY = "ancestry"
         const val COL_BACKGROUND = "background"
         const val COL_CLASS = "class_name"
+        const val COL_STR = "strength"
+        const val COL_DEX = "dexterity"
+        const val COL_CON = "constitution"
+        const val COL_INT = "intelligence"
+        const val COL_WIS = "wisdom"
+        const val COL_CHA = "charisma"
         const val COL_NOTES = "notes"
         const val COL_UPDATED_AT = "updated_at"
         const val LEGACY_KEY = "characters"

@@ -8,29 +8,24 @@
 - Kotlin + Jetpack Compose;
 - локальный список персонажей;
 - создание и редактирование базовой карточки персонажа;
+- шесть модификаторов характеристик: Сила, Ловкость, Выносливость, Интеллект, Мудрость, Харизма;
 - удаление с подтверждением;
-- постоянное хранение в собственной SQLite `pf2e-builder-ru.db`;
-- автоматическая миграция раннего dev-хранилища SharedPreferences -> SQLite;
-- JSON export/import через Android Storage Access Framework без общего file permission;
+- собственная SQLite `pf2e-builder-ru.db`;
+- SQLite migration v1 -> v2 и миграция раннего SharedPreferences storage;
+- JSON character format v2 с импортом v1;
+- JSON export/import через Android Storage Access Framework;
 - diagnostics screen;
-- unit-тесты базовой валидации;
+- unit-тесты базовой валидации/форматирования;
 - **нет** разрешения INTERNET;
 - **нет** Firebase, Ads и Play Billing зависимостей;
 - версия `0.2.0-dev` / versionCode `300`.
 
-## Формат персонажа v1
+## Два независимых versioned storage boundaries
 
-Экспортируемый файл имеет схему `pf2e-builder-ru.character`, версию `1` и пока хранит базовые поля:
+- SQLite — внутреннее локальное хранилище и собственные DB migrations;
+- JSON `pf2e-builder-ru.character` — переносимый формат для backup/share/import с отдельными format migrations.
 
-- id;
-- имя;
-- уровень;
-- наследие;
-- происхождение;
-- класс;
-- заметки.
-
-JSON остаётся переносимым внешним форматом, а SQLite — внутренним persistent storage. Они версионируются отдельно.
+Это позволяет менять внутреннюю схему приложения без привязки пользовательских экспортов к SQLite implementation details.
 
 ## Build stack
 
@@ -43,8 +38,8 @@ JSON остаётся переносимым внешним форматом, а
 
 ## Следующий вертикальный срез
 
-1. typed character model: характеристики, защиты и навыки;
-2. source-controlled rules-data API;
-3. выбор наследия/происхождения/класса из локального каталога;
-4. нормализованные дочерние таблицы для повторяющихся selections;
-5. миграции формата персонажа и импорт из transition/legacy сборок.
+1. owned rules catalog runtime loader;
+2. stable-ID выбор наследия/происхождения/класса;
+3. профiciencies/skills и derived calculations;
+4. нормализованные дочерние таблицы для repeating selections;
+5. transition/legacy character migration adapter.

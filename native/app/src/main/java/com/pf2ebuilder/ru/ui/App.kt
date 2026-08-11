@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -34,6 +36,7 @@ import com.pf2ebuilder.ru.BuildConfig
 import com.pf2ebuilder.ru.data.CharacterJson
 import com.pf2ebuilder.ru.data.CharacterRecord
 import com.pf2ebuilder.ru.data.CharacterRepository
+import com.pf2ebuilder.ru.domain.CharacterValidation
 import java.util.UUID
 
 private enum class Screen { Characters, Diagnostics }
@@ -195,6 +198,16 @@ private fun CharacterCard(
             Text("Уровень ${character.level}${character.className.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}")
             if (character.ancestry.isNotBlank()) Text("Наследие: ${character.ancestry}")
             if (character.background.isNotBlank()) Text("Происхождение: ${character.background}")
+            Text(
+                "СИЛ ${CharacterValidation.formatModifier(character.strength)} · " +
+                    "ЛВК ${CharacterValidation.formatModifier(character.dexterity)} · " +
+                    "ВЫН ${CharacterValidation.formatModifier(character.constitution)}"
+            )
+            Text(
+                "ИНТ ${CharacterValidation.formatModifier(character.intelligence)} · " +
+                    "МДР ${CharacterValidation.formatModifier(character.wisdom)} · " +
+                    "ХАР ${CharacterValidation.formatModifier(character.charisma)}"
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 TextButton(onClick = onEdit) { Text("Изменить") }
                 TextButton(onClick = onExport) { Text("Экспорт") }
@@ -216,18 +229,34 @@ private fun CharacterEditorDialog(
     var ancestry by remember(initial.id) { mutableStateOf(initial.ancestry) }
     var background by remember(initial.id) { mutableStateOf(initial.background) }
     var className by remember(initial.id) { mutableStateOf(initial.className) }
+    var strength by remember(initial.id) { mutableStateOf(initial.strength.toString()) }
+    var dexterity by remember(initial.id) { mutableStateOf(initial.dexterity.toString()) }
+    var constitution by remember(initial.id) { mutableStateOf(initial.constitution.toString()) }
+    var intelligence by remember(initial.id) { mutableStateOf(initial.intelligence.toString()) }
+    var wisdom by remember(initial.id) { mutableStateOf(initial.wisdom.toString()) }
+    var charisma by remember(initial.id) { mutableStateOf(initial.charisma.toString()) }
     var notes by remember(initial.id) { mutableStateOf(initial.notes) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (isNew) "Новый персонаж" else "Изменить персонажа") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Имя") }, singleLine = true)
                 OutlinedTextField(value = levelText, onValueChange = { levelText = it.filter(Char::isDigit).take(2) }, label = { Text("Уровень 1–20") }, singleLine = true)
                 OutlinedTextField(value = ancestry, onValueChange = { ancestry = it }, label = { Text("Наследие") }, singleLine = true)
                 OutlinedTextField(value = background, onValueChange = { background = it }, label = { Text("Происхождение") }, singleLine = true)
                 OutlinedTextField(value = className, onValueChange = { className = it }, label = { Text("Класс") }, singleLine = true)
+                Text("Модификаторы характеристик", style = MaterialTheme.typography.titleSmall)
+                ModifierField("Сила", strength) { strength = it }
+                ModifierField("Ловкость", dexterity) { dexterity = it }
+                ModifierField("Выносливость", constitution) { constitution = it }
+                ModifierField("Интеллект", intelligence) { intelligence = it }
+                ModifierField("Мудрость", wisdom) { wisdom = it }
+                ModifierField("Харизма", charisma) { charisma = it }
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Заметки") }, minLines = 2)
             }
         },
@@ -240,12 +269,31 @@ private fun CharacterEditorDialog(
                         ancestry = ancestry,
                         background = background,
                         className = className,
+                        strength = strength.toIntOrNull() ?: 0,
+                        dexterity = dexterity.toIntOrNull() ?: 0,
+                        constitution = constitution.toIntOrNull() ?: 0,
+                        intelligence = intelligence.toIntOrNull() ?: 0,
+                        wisdom = wisdom.toIntOrNull() ?: 0,
+                        charisma = charisma.toIntOrNull() ?: 0,
                         notes = notes,
                     ).normalized()
                 )
             }) { Text("Сохранить") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена") } },
+    )
+}
+
+@Composable
+private fun ModifierField(label: String, value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = { candidate ->
+            if (candidate.matches(Regex("-?\\d{0,2}"))) onValueChange(candidate)
+        },
+        label = { Text(label) },
+        singleLine = true,
+        supportingText = { Text("Например: +4 вводится как 4, -1 как -1") },
     )
 }
 
@@ -261,7 +309,7 @@ private fun DiagnosticsScreen(characterCount: Int, onBack: () -> Unit) {
         Text("Реклама: отсутствует")
         Text("Billing: отсутствует")
         Text("Firebase: отсутствует")
-        Text("Хранилище: SQLite pf2e-builder-ru.db v1")
+        Text("Хранилище: SQLite pf2e-builder-ru.db v2")
         Spacer(Modifier.height(8.dp))
         Button(onClick = onBack) { Text("Назад") }
     }
