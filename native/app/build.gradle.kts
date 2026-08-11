@@ -13,6 +13,15 @@ android {
         targetSdk = 36
         versionCode = 310
         versionName = "0.3.0-dev"
+        resValue("string", "app_name", "RuneSheet RU")
+    }
+
+    buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-debug"
+            resValue("string", "app_name", "RuneSheet RU Dev")
+        }
     }
 
     sourceSets {
