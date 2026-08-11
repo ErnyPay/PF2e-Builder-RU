@@ -9,6 +9,15 @@ from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
 from product_components import patch_activity_main
+from milestone_components import (
+    BUTTON_LAYOUTS,
+    ICON_NAMES,
+    harden_manifest_privacy,
+    patch_button_layout,
+    patch_nav_header,
+    patch_subheader,
+    recolor_icon,
+)
 from reskin_patch import (
     FRONTPAGE_LAYOUTS,
     patch_frontpage_layout,
@@ -65,9 +74,26 @@ def main():
         if 'res/layout/activity_main.xml' in names:
             resource_overrides['res/layout/activity_main.xml']=patch_activity_main(z.read('res/layout/activity_main.xml'))
 
+        # Milestone UI pass: only contained components where surface + every
+        # label are migrated together. This explicitly avoids the alpha.12
+        # invisible-label regression from background-only rewrites.
+        for path in sorted(BUTTON_LAYOUTS):
+            if path in names:
+                resource_overrides[path]=patch_button_layout(z.read(path))
+        if 'res/layout/nav_header_main.xml' in names:
+            resource_overrides['res/layout/nav_header_main.xml']=patch_nav_header(z.read('res/layout/nav_header_main.xml'))
+        if 'res/layout/text_view_subheader.xml' in names:
+            resource_overrides['res/layout/text_view_subheader.xml']=patch_subheader(z.read('res/layout/text_view_subheader.xml'))
+        for name in sorted(ICON_NAMES):
+            path='res/drawable/'+name
+            if path in names:
+                resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
+
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
-    # Only rename the product literal. Component backgrounds/text colors are kept
-    # from the polished baseline until they can be migrated as matched pairs.
+    manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
+
+    # Only rename the product literal. Never globally rewrite theme colors:
+    # stateful resources are shared by unrelated inherited widgets.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
     repl={
