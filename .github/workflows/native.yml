@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'native/**'
+      - 'rules/**'
       - '.github/workflows/native.yml'
   pull_request:
     paths:
       - 'native/**'
+      - 'rules/**'
       - '.github/workflows/native.yml'
 
 jobs:
@@ -25,11 +27,11 @@ jobs:
           gradle-version: '9.5.0'
       - name: Install Android SDK 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
-      - name: Build native shell
+      - name: Build native app
         run: gradle -p native :app:assembleDebug :app:testDebugUnitTest --stacktrace
       - name: Upload native debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: PF2e-Builder-RU-native-debug
+          name: RuneSheet-RU-native-debug
           path: native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

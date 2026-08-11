@@ -11,8 +11,12 @@ android {
         applicationId = "com.pf2ebuilder.ru.builderx"
         minSdk = 23
         targetSdk = 36
-        versionCode = 300
-        versionName = "0.2.0-dev"
+        versionCode = 310
+        versionName = "0.3.0-dev"
+    }
+
+    sourceSets {
+        getByName("main").assets.srcDir("../../rules/catalog")
     }
 
     buildFeatures {

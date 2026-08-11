@@ -52,6 +52,9 @@ class CharacterRepository(context: Context) {
             put(COL_ANCESTRY, item.ancestry)
             put(COL_BACKGROUND, item.background)
             put(COL_CLASS, item.className)
+            put(COL_ANCESTRY_ID, item.ancestryId)
+            put(COL_BACKGROUND_ID, item.backgroundId)
+            put(COL_CLASS_ID, item.classId)
             put(COL_STR, item.strength)
             put(COL_DEX, item.dexterity)
             put(COL_CON, item.constitution)
@@ -70,6 +73,7 @@ class CharacterRepository(context: Context) {
             TABLE,
             arrayOf(
                 COL_ID, COL_NAME, COL_LEVEL, COL_ANCESTRY, COL_BACKGROUND, COL_CLASS,
+                COL_ANCESTRY_ID, COL_BACKGROUND_ID, COL_CLASS_ID,
                 COL_STR, COL_DEX, COL_CON, COL_INT, COL_WIS, COL_CHA, COL_NOTES,
             ),
             null,
@@ -84,6 +88,9 @@ class CharacterRepository(context: Context) {
             val ancestryIndex = cursor.getColumnIndexOrThrow(COL_ANCESTRY)
             val backgroundIndex = cursor.getColumnIndexOrThrow(COL_BACKGROUND)
             val classIndex = cursor.getColumnIndexOrThrow(COL_CLASS)
+            val ancestryIdIndex = cursor.getColumnIndexOrThrow(COL_ANCESTRY_ID)
+            val backgroundIdIndex = cursor.getColumnIndexOrThrow(COL_BACKGROUND_ID)
+            val classIdIndex = cursor.getColumnIndexOrThrow(COL_CLASS_ID)
             val strIndex = cursor.getColumnIndexOrThrow(COL_STR)
             val dexIndex = cursor.getColumnIndexOrThrow(COL_DEX)
             val conIndex = cursor.getColumnIndexOrThrow(COL_CON)
@@ -99,6 +106,9 @@ class CharacterRepository(context: Context) {
                     ancestry = cursor.getString(ancestryIndex),
                     background = cursor.getString(backgroundIndex),
                     className = cursor.getString(classIndex),
+                    ancestryId = cursor.getString(ancestryIdIndex),
+                    backgroundId = cursor.getString(backgroundIdIndex),
+                    classId = cursor.getString(classIdIndex),
                     strength = cursor.getInt(strIndex),
                     dexterity = cursor.getInt(dexIndex),
                     constitution = cursor.getInt(conIndex),
@@ -139,6 +149,9 @@ class CharacterRepository(context: Context) {
                     $COL_ANCESTRY TEXT NOT NULL DEFAULT '',
                     $COL_BACKGROUND TEXT NOT NULL DEFAULT '',
                     $COL_CLASS TEXT NOT NULL DEFAULT '',
+                    $COL_ANCESTRY_ID TEXT NOT NULL DEFAULT '',
+                    $COL_BACKGROUND_ID TEXT NOT NULL DEFAULT '',
+                    $COL_CLASS_ID TEXT NOT NULL DEFAULT '',
                     $COL_STR INTEGER NOT NULL DEFAULT 0,
                     $COL_DEX INTEGER NOT NULL DEFAULT 0,
                     $COL_CON INTEGER NOT NULL DEFAULT 0,
@@ -161,15 +174,21 @@ class CharacterRepository(context: Context) {
                 }
                 version = 2
             }
+            if (version == 2) {
+                listOf(COL_ANCESTRY_ID, COL_BACKGROUND_ID, COL_CLASS_ID).forEach { column ->
+                    db.execSQL("ALTER TABLE $TABLE ADD COLUMN $column TEXT NOT NULL DEFAULT ''")
+                }
+                version = 3
+            }
             if (version != newVersion) {
-                error("Missing PF2e Builder RU character DB migration: $oldVersion -> $newVersion (stopped at $version)")
+                error("Missing RuneSheet character DB migration: $oldVersion -> $newVersion (stopped at $version)")
             }
         }
     }
 
     private companion object {
         const val DB_NAME = "pf2e-builder-ru.db"
-        const val DB_VERSION = 2
+        const val DB_VERSION = 3
         const val TABLE = "characters"
         const val COL_ID = "id"
         const val COL_NAME = "name"
@@ -177,6 +196,9 @@ class CharacterRepository(context: Context) {
         const val COL_ANCESTRY = "ancestry"
         const val COL_BACKGROUND = "background"
         const val COL_CLASS = "class_name"
+        const val COL_ANCESTRY_ID = "ancestry_id"
+        const val COL_BACKGROUND_ID = "background_id"
+        const val COL_CLASS_ID = "class_id"
         const val COL_STR = "strength"
         const val COL_DEX = "dexterity"
         const val COL_CON = "constitution"

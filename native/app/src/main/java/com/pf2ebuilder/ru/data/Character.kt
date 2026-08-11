@@ -12,6 +12,9 @@ data class CharacterRecord(
     val ancestry: String = "",
     val background: String = "",
     val className: String = "",
+    val ancestryId: String = "",
+    val backgroundId: String = "",
+    val classId: String = "",
     val strength: Int = 0,
     val dexterity: Int = 0,
     val constitution: Int = 0,
@@ -26,6 +29,9 @@ data class CharacterRecord(
         ancestry = ancestry.trim(),
         background = background.trim(),
         className = className.trim(),
+        ancestryId = ancestryId.trim(),
+        backgroundId = backgroundId.trim(),
+        classId = classId.trim(),
         strength = CharacterValidation.normalizeAttributeModifier(strength),
         dexterity = CharacterValidation.normalizeAttributeModifier(dexterity),
         constitution = CharacterValidation.normalizeAttributeModifier(constitution),
@@ -38,7 +44,7 @@ data class CharacterRecord(
 
 object CharacterJson {
     const val SCHEMA = "pf2e-builder-ru.character"
-    const val VERSION = 2
+    const val VERSION = 3
 
     fun encodeCharacter(character: CharacterRecord): JSONObject {
         val c = character.normalized()
@@ -49,6 +55,13 @@ object CharacterJson {
             .put("ancestry", c.ancestry)
             .put("background", c.background)
             .put("className", c.className)
+            .put(
+                "rules",
+                JSONObject()
+                    .put("ancestryId", c.ancestryId)
+                    .put("backgroundId", c.backgroundId)
+                    .put("classId", c.classId),
+            )
             .put(
                 "attributes",
                 JSONObject()
@@ -64,6 +77,7 @@ object CharacterJson {
 
     fun decodeCharacter(json: JSONObject, version: Int = VERSION): CharacterRecord {
         val attributes = if (version >= 2) json.optJSONObject("attributes") else null
+        val rules = if (version >= 3) json.optJSONObject("rules") else null
         return CharacterRecord(
             id = json.optString("id").ifBlank { UUID.randomUUID().toString() },
             name = json.optString("name", "Без имени"),
@@ -71,6 +85,9 @@ object CharacterJson {
             ancestry = json.optString("ancestry"),
             background = json.optString("background"),
             className = json.optString("className"),
+            ancestryId = rules?.optString("ancestryId").orEmpty(),
+            backgroundId = rules?.optString("backgroundId").orEmpty(),
+            classId = rules?.optString("classId").orEmpty(),
             strength = attributes?.optInt("strength", 0) ?: 0,
             dexterity = attributes?.optInt("dexterity", 0) ?: 0,
             constitution = attributes?.optInt("constitution", 0) ?: 0,

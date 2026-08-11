@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -36,6 +34,8 @@ import com.pf2ebuilder.ru.BuildConfig
 import com.pf2ebuilder.ru.data.CharacterJson
 import com.pf2ebuilder.ru.data.CharacterRecord
 import com.pf2ebuilder.ru.data.CharacterRepository
+import com.pf2ebuilder.ru.data.RuleEntity
+import com.pf2ebuilder.ru.data.RulesCatalog
 import com.pf2ebuilder.ru.domain.CharacterValidation
 import java.util.UUID
 
@@ -45,18 +45,15 @@ private enum class Screen { Characters, Diagnostics }
 fun PF2eBuilderApp() {
     val context = LocalContext.current
     val repository = remember { CharacterRepository(context) }
+    val rules = remember {
+        runCatching { RulesCatalog.load(context) }.getOrElse { RulesCatalog.empty() }
+    }
     var screen by remember { mutableStateOf(Screen.Characters) }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         when (screen) {
-            Screen.Characters -> CharacterListScreen(
-                repository = repository,
-                onDiagnostics = { screen = Screen.Diagnostics },
-            )
-            Screen.Diagnostics -> DiagnosticsScreen(
-                characterCount = repository.characters.size,
-                onBack = { screen = Screen.Characters },
-            )
+            Screen.Characters -> CharacterListScreen(repository, rules) { screen = Screen.Diagnostics }
+            Screen.Diagnostics -> DiagnosticsScreen(repository.characters.size, rules) { screen = Screen.Characters }
         }
     }
 }
@@ -64,6 +61,7 @@ fun PF2eBuilderApp() {
 @Composable
 private fun CharacterListScreen(
     repository: CharacterRepository,
+    rules: RulesCatalog,
     onDiagnostics: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -87,9 +85,7 @@ private fun CharacterListScreen(
         exportCandidate = null
     }
 
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             message = runCatching {
                 val text = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
@@ -102,29 +98,23 @@ private fun CharacterListScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-        Text("PF2e Builder RU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Нативное приложение · локальная SQLite · без сети", color = MaterialTheme.colorScheme.primary)
+        Text("RuneSheet RU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Нативный конструктор · локальный каталог · без сети", color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(20.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(onClick = {
                 editor = CharacterRecord(id = UUID.randomUUID().toString(), name = "", level = 1)
-            }) {
-                Text("Новый")
-            }
+            }) { Text("Новый") }
             OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain")) }) {
                 Text("Импорт")
             }
-            OutlinedButton(onClick = onDiagnostics) {
-                Text("Диагностика")
-            }
+            OutlinedButton(onClick = onDiagnostics) { Text("Диагностика") }
         }
 
         message?.let {
             Spacer(Modifier.height(12.dp))
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Text(it, modifier = Modifier.padding(12.dp))
-            }
+            Card(modifier = Modifier.fillMaxWidth()) { Text(it, modifier = Modifier.padding(12.dp)) }
         }
 
         Spacer(Modifier.height(20.dp))
@@ -135,18 +125,22 @@ private fun CharacterListScreen(
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Пока нет персонажей", style = MaterialTheme.typography.titleMedium)
-                    Text("Создай первого героя или импортируй файл PF2e Builder RU.")
+                    Text("Создай первого героя и выбери народ, происхождение и класс из нашего каталога.")
                 }
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(repository.characters, key = { it.id }) { character ->
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                repository.characters.forEach { character ->
                     CharacterCard(
                         character = character,
+                        rules = rules,
                         onEdit = { editor = character },
                         onExport = {
                             exportCandidate = character
-                            exportLauncher.launch(safeFileName(character.name) + ".pf2eru.json")
+                            exportLauncher.launch(safeFileName(character.name) + ".runesheet.json")
                         },
                         onDelete = { deleteCandidate = character },
                     )
@@ -159,6 +153,7 @@ private fun CharacterListScreen(
         CharacterEditorDialog(
             initial = current,
             isNew = repository.characters.none { it.id == current.id },
+            rules = rules,
             onDismiss = { editor = null },
             onSave = { value ->
                 if (repository.characters.any { it.id == value.id }) repository.update(value) else repository.create(value)
@@ -188,16 +183,21 @@ private fun CharacterListScreen(
 @Composable
 private fun CharacterCard(
     character: CharacterRecord,
+    rules: RulesCatalog,
     onEdit: () -> Unit,
     onExport: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val ancestryName = rules.displayName(character.ancestryId, character.ancestry)
+    val backgroundName = rules.displayName(character.backgroundId, character.background)
+    val className = rules.displayName(character.classId, character.className)
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(character.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            Text("Уровень ${character.level}${character.className.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}")
-            if (character.ancestry.isNotBlank()) Text("Наследие: ${character.ancestry}")
-            if (character.background.isNotBlank()) Text("Происхождение: ${character.background}")
+            Text("Уровень ${character.level}${className.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""}")
+            if (ancestryName.isNotBlank()) Text("Народ: $ancestryName")
+            if (backgroundName.isNotBlank()) Text("Происхождение: $backgroundName")
             Text(
                 "СИЛ ${CharacterValidation.formatModifier(character.strength)} · " +
                     "ЛВК ${CharacterValidation.formatModifier(character.dexterity)} · " +
@@ -221,14 +221,21 @@ private fun CharacterCard(
 private fun CharacterEditorDialog(
     initial: CharacterRecord,
     isNew: Boolean,
+    rules: RulesCatalog,
     onDismiss: () -> Unit,
     onSave: (CharacterRecord) -> Unit,
 ) {
     var name by remember(initial.id) { mutableStateOf(initial.name) }
     var levelText by remember(initial.id) { mutableStateOf(initial.level.toString()) }
-    var ancestry by remember(initial.id) { mutableStateOf(initial.ancestry) }
-    var background by remember(initial.id) { mutableStateOf(initial.background) }
-    var className by remember(initial.id) { mutableStateOf(initial.className) }
+    var ancestryId by remember(initial.id) {
+        mutableStateOf(initial.ancestryId.ifBlank { rules.matchLegacy("ancestry", initial.ancestry)?.id.orEmpty() })
+    }
+    var backgroundId by remember(initial.id) {
+        mutableStateOf(initial.backgroundId.ifBlank { rules.matchLegacy("background", initial.background)?.id.orEmpty() })
+    }
+    var classId by remember(initial.id) {
+        mutableStateOf(initial.classId.ifBlank { rules.matchLegacy("class", initial.className)?.id.orEmpty() })
+    }
     var strength by remember(initial.id) { mutableStateOf(initial.strength.toString()) }
     var dexterity by remember(initial.id) { mutableStateOf(initial.dexterity.toString()) }
     var constitution by remember(initial.id) { mutableStateOf(initial.constitution.toString()) }
@@ -243,13 +250,19 @@ private fun CharacterEditorDialog(
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Имя") }, singleLine = true)
-                OutlinedTextField(value = levelText, onValueChange = { levelText = it.filter(Char::isDigit).take(2) }, label = { Text("Уровень 1–20") }, singleLine = true)
-                OutlinedTextField(value = ancestry, onValueChange = { ancestry = it }, label = { Text("Наследие") }, singleLine = true)
-                OutlinedTextField(value = background, onValueChange = { background = it }, label = { Text("Происхождение") }, singleLine = true)
-                OutlinedTextField(value = className, onValueChange = { className = it }, label = { Text("Класс") }, singleLine = true)
+                OutlinedTextField(
+                    value = levelText,
+                    onValueChange = { levelText = it.filter(Char::isDigit).take(2) },
+                    label = { Text("Уровень 1–20") },
+                    singleLine = true,
+                )
+                RulePickerField("Народ", ancestryId, initial.ancestry, rules.ancestries) { ancestryId = it }
+                RulePickerField("Происхождение", backgroundId, initial.background, rules.backgrounds) { backgroundId = it }
+                RulePickerField("Класс", classId, initial.className, rules.classes) { classId = it }
+
                 Text("Модификаторы характеристик", style = MaterialTheme.typography.titleSmall)
                 ModifierField("Сила", strength) { strength = it }
                 ModifierField("Ловкость", dexterity) { dexterity = it }
@@ -262,13 +275,19 @@ private fun CharacterEditorDialog(
         },
         confirmButton = {
             TextButton(onClick = {
+                val ancestry = rules.find(ancestryId)
+                val background = rules.find(backgroundId)
+                val characterClass = rules.find(classId)
                 onSave(
                     initial.copy(
                         name = name,
                         level = levelText.toIntOrNull() ?: 1,
-                        ancestry = ancestry,
-                        background = background,
-                        className = className,
+                        ancestry = ancestry?.nameRu ?: initial.ancestry,
+                        background = background?.nameRu ?: initial.background,
+                        className = characterClass?.nameRu ?: initial.className,
+                        ancestryId = ancestry?.id.orEmpty(),
+                        backgroundId = background?.id.orEmpty(),
+                        classId = characterClass?.id.orEmpty(),
                         strength = strength.toIntOrNull() ?: 0,
                         dexterity = dexterity.toIntOrNull() ?: 0,
                         constitution = constitution.toIntOrNull() ?: 0,
@@ -285,12 +304,71 @@ private fun CharacterEditorDialog(
 }
 
 @Composable
+private fun RulePickerField(
+    label: String,
+    selectedId: String,
+    legacyValue: String,
+    options: List<RuleEntity>,
+    onSelect: (String) -> Unit,
+) {
+    var open by remember { mutableStateOf(false) }
+    val selected = options.firstOrNull { it.id == selectedId }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.titleSmall)
+        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(selected?.displayName(showEnglish = true) ?: legacyValue.ifBlank { "Выбрать" })
+        }
+        selected?.descriptionRu?.takeIf(String::isNotBlank)?.let { description ->
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(label) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    TextButton(
+                        onClick = {
+                            onSelect("")
+                            open = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Не выбрано") }
+                    options.forEach { option ->
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(
+                                    onClick = {
+                                        onSelect(option.id)
+                                        open = false
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text(option.displayName(showEnglish = true)) }
+                                if (option.descriptionRu.isNotBlank()) {
+                                    Text(option.descriptionRu, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { open = false }) { Text("Закрыть") } },
+        )
+    }
+}
+
+@Composable
 private fun ModifierField(label: String, value: String, onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
-        onValueChange = { candidate ->
-            if (candidate.matches(Regex("-?\\d{0,2}"))) onValueChange(candidate)
-        },
+        onValueChange = { candidate -> if (candidate.matches(Regex("-?\\d{0,2}"))) onValueChange(candidate) },
         label = { Text(label) },
         singleLine = true,
         supportingText = { Text("Например: +4 вводится как 4, -1 как -1") },
@@ -298,18 +376,20 @@ private fun ModifierField(label: String, value: String, onValueChange: (String) 
 }
 
 @Composable
-private fun DiagnosticsScreen(characterCount: Int, onBack: () -> Unit) {
+private fun DiagnosticsScreen(characterCount: Int, rules: RulesCatalog, onBack: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Диагностика", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Application ID: ${BuildConfig.APPLICATION_ID}")
         Text("Версия: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         Text("Персонажей локально: $characterCount")
+        Text("Каталог: ${rules.catalogId} · ${rules.entities.size} записей")
+        Text("Народов: ${rules.ancestries.size} · происхождений: ${rules.backgrounds.size} · классов: ${rules.classes.size}")
         Text("Формат экспорта: ${CharacterJson.SCHEMA} v${CharacterJson.VERSION}")
         Text("Сеть: разрешение INTERNET отсутствует")
         Text("Реклама: отсутствует")
         Text("Billing: отсутствует")
         Text("Firebase: отсутствует")
-        Text("Хранилище: SQLite pf2e-builder-ru.db v2")
+        Text("Хранилище: SQLite pf2e-builder-ru.db v3")
         Spacer(Modifier.height(8.dp))
         Button(onClick = onBack) { Text("Назад") }
     }
