@@ -1,0 +1,20 @@
+# Proprietary/local inputs and outputs
+*.apk
+*.aab
+*.apks
+*.p12
+*.jks
+*.keystore
+.local/
+dist/
+work/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
