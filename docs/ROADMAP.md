@@ -38,7 +38,7 @@
 - [x] own versioned JSON character format v1;
 - [x] local JSON export/import;
 - [x] native CI producing a debug APK artifact;
-- [ ] migrate local repository to Room/SQLite;
+- [x] own SQLite database + migration from early dev storage;
 - [ ] ability/attribute model and calculations;
 - [ ] ancestry/background/class rules selection from owned rules catalog;
 - [ ] feats/spells/equipment domain modules;

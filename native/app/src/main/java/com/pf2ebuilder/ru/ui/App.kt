@@ -100,7 +100,7 @@ private fun CharacterListScreen(
 
     Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
         Text("PF2e Builder RU", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Text("Нативная оболочка · локальные данные · без сети", color = MaterialTheme.colorScheme.primary)
+        Text("Нативное приложение · локальная SQLite · без сети", color = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(20.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -261,7 +261,7 @@ private fun DiagnosticsScreen(characterCount: Int, onBack: () -> Unit) {
         Text("Реклама: отсутствует")
         Text("Billing: отсутствует")
         Text("Firebase: отсутствует")
-        Text("Хранилище: локальное SharedPreferences v1")
+        Text("Хранилище: SQLite pf2e-builder-ru.db v1")
         Spacer(Modifier.height(8.dp))
         Button(onClick = onBack) { Text("Назад") }
     }
