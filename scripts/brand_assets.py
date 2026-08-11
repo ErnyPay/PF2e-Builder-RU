@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 import math
 
-FONT_CANDIDATES = [
+FONT_BOLD = [
     '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
     '/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf',
 ]
@@ -12,236 +13,237 @@ FONT_REGULAR = [
     '/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf',
 ]
 
-def _font(size:int, bold=True):
-    candidates = FONT_CANDIDATES if bold else FONT_REGULAR
-    for p in candidates:
-        if Path(p).exists(): return ImageFont.truetype(p,size)
+
+def _font(size: int, bold: bool = True):
+    for p in (FONT_BOLD if bold else FONT_REGULAR):
+        if Path(p).exists():
+            return ImageFont.truetype(p, size)
     return ImageFont.load_default()
 
-def _palette(dark=True):
+
+def _palette(dark: bool = False):
     if dark:
         return {
-            'bg': (12, 20, 28, 255),
-            'panel': (23, 35, 45, 255),
-            'panel2': (31, 49, 61, 255),
-            'cyan': (83, 213, 208, 255),
-            'amber': (244, 180, 74, 255),
-            'text': (239, 245, 247, 255),
-            'muted': (157, 176, 184, 255),
+            'bg': (17, 24, 29, 255),
+            'panel': (28, 37, 43, 255),
+            'panel2': (40, 51, 58, 255),
+            'accent': (72, 190, 184, 255),
+            'text': (239, 244, 246, 255),
+            'muted': (164, 177, 183, 255),
+            'line': (67, 82, 89, 255),
         }
     return {
-        'bg': (242, 246, 245, 255),
+        'bg': (245, 247, 247, 255),
         'panel': (255, 255, 255, 255),
-        'panel2': (225, 235, 233, 255),
-        'cyan': (28, 132, 133, 255),
-        'amber': (188, 120, 33, 255),
-        'text': (25, 38, 44, 255),
-        'muted': (92, 112, 119, 255),
+        'panel2': (235, 240, 240, 255),
+        'accent': (34, 138, 137, 255),
+        'text': (29, 39, 44, 255),
+        'muted': (99, 112, 118, 255),
+        'line': (208, 217, 219, 255),
     }
 
-def _draw_sigil(size:int, *, transparent=False, dark=True):
-    c=_palette(dark)
-    im=Image.new('RGBA',(size,size),(0,0,0,0) if transparent else c['bg'])
-    d=ImageDraw.Draw(im)
-    cx=cy=size/2
-    r=size*.31
-    # Original rune/compass mark: concentric broken ring + four directional strokes.
-    lw=max(2,size//32)
-    d.rounded_rectangle((size*.12,size*.12,size*.88,size*.88), radius=size*.18,
-                        fill=c['panel'], outline=c['panel2'], width=lw)
-    box=(cx-r,cy-r,cx+r,cy+r)
-    d.arc(box,18,150,fill=c['cyan'],width=lw*2)
-    d.arc(box,198,330,fill=c['amber'],width=lw*2)
-    inner=r*.50
-    points=[]
-    for k in range(8):
-        a=math.radians(k*45-90)
-        rr=inner*(1.0 if k%2==0 else .62)
-        points.append((cx+math.cos(a)*rr,cy+math.sin(a)*rr))
-    d.polygon(points,fill=None,outline=c['text'])
-    d.line((cx,cy-inner*.95,cx,cy+inner*.95),fill=c['text'],width=lw)
-    d.line((cx-inner*.95,cy,cx+inner*.95,cy),fill=c['text'],width=lw)
-    dot=size*.035
-    d.ellipse((cx-dot,cy-dot,cx+dot,cy+dot),fill=c['cyan'])
-    return im
-
-def _fit_text(draw,text,font,max_width):
-    while font.size>10 and draw.textbbox((0,0),text,font=font)[2] > max_width:
-        font=_font(font.size-2, bold=True)
-    return font
 
 def _gradient(size, top, bottom):
-    w,h=size
-    im=Image.new('RGB',size,top[:3])
-    px=im.load()
+    w, h = size
+    im = Image.new('RGB', size, top[:3])
+    px = im.load()
     for y in range(h):
-        t=y/max(1,h-1)
-        row=tuple(round(top[i]*(1-t)+bottom[i]*t) for i in range(3))
-        for x in range(w): px[x,y]=row
+        t = y / max(1, h - 1)
+        row = tuple(round(top[i] * (1 - t) + bottom[i] * t) for i in range(3))
+        for x in range(w):
+            px[x, y] = row
+    return im.convert('RGBA')
+
+
+def _draw_mark(size: int, *, dark: bool = False, transparent: bool = True):
+    c = _palette(dark)
+    im = Image.new('RGBA', (size, size), (0, 0, 0, 0) if transparent else c['bg'])
+    d = ImageDraw.Draw(im)
+    cx = cy = size / 2
+    r = size * .31
+    lw = max(2, size // 36)
+
+    # One restrained RuneSheet mark: circle + faceted compass/diamond.
+    d.ellipse((cx-r, cy-r, cx+r, cy+r), outline=c['line'], width=lw)
+    pts = [(cx, cy-r*.72), (cx+r*.72, cy), (cx, cy+r*.72), (cx-r*.72, cy)]
+    d.polygon(pts, outline=c['accent'])
+    d.line(pts + [pts[0]], fill=c['accent'], width=lw)
+    inner = r * .22
+    d.polygon([(cx, cy-inner), (cx+inner, cy), (cx, cy+inner), (cx-inner, cy)], fill=c['accent'])
     return im
 
-def _grid_overlay(im, accent, spacing=64, alpha=24):
-    ov=Image.new('RGBA',im.size,(0,0,0,0)); d=ImageDraw.Draw(ov)
-    w,h=im.size
-    col=accent[:3]+(alpha,)
-    for x in range(-h,w+h,spacing): d.line((x,0,x-h,h),fill=col,width=1)
-    for x in range(0,w+h,spacing): d.line((x,0,x-h,h),fill=col,width=1)
-    return Image.alpha_composite(im.convert('RGBA'),ov)
 
-def _front_card(w,h,title,subtitle,kind='new',dark=False):
-    c=_palette(True if dark else False)
-    top = (13,28,36,255) if dark else (229,240,238,255)
-    bottom = (27,48,58,255) if dark else (248,250,249,255)
-    im=_gradient((w,h),top,bottom).convert('RGBA')
-    im=_grid_overlay(im,c['cyan'],spacing=max(40,w//14),alpha=28 if dark else 18)
-    d=ImageDraw.Draw(im)
-    sig=_draw_sigil(int(h*.72),transparent=True,dark=dark)
-    im.alpha_composite(sig,(int(w*.07),int(h*.14)))
-    x=int(w*.43)
-    d.line((x,int(h*.14),x,int(h*.86)),fill=c['cyan'],width=max(2,w//320))
-    f=_fit_text(d,title,_font(int(h*.105)),int(w*.49))
-    f2=_font(int(h*.045),bold=False)
-    d.text((x+int(w*.045),int(h*.30)),title,font=f,fill=c['text'])
-    d.text((x+int(w*.045),int(h*.52)),subtitle,font=f2,fill=c['muted'])
-    pill='СОЗДАТЬ' if kind=='new' else 'ОТКРЫТЬ'
-    fp=_font(int(h*.036))
-    bx=x+int(w*.045); by=int(h*.68)
-    tb=d.textbbox((0,0),pill,font=fp); tw=tb[2]-tb[0]; th=tb[3]-tb[1]
-    d.rounded_rectangle((bx,by,bx+tw+36,by+th+22),radius=16,fill=c['cyan'])
-    d.text((bx+18,by+7),pill,font=fp,fill=(9,24,28,255))
+def _fit(draw, text: str, size: int, max_width: int):
+    f = _font(size)
+    while size > 12 and draw.textbbox((0, 0), text, font=f)[2] > max_width:
+        size -= 2
+        f = _font(size)
+    return f
+
+
+def _front_card(w: int, h: int, title: str, subtitle: str, action: str, *, dark: bool):
+    c = _palette(dark)
+    if dark:
+        im = _gradient((w, h), (20, 28, 33, 255), (25, 34, 40, 255))
+    else:
+        im = _gradient((w, h), (250, 251, 251, 255), (240, 244, 244, 255))
+    d = ImageDraw.Draw(im)
+
+    # Quiet card, no grids or ornamental double frames.
+    pad = int(h * .10)
+    d.rounded_rectangle((pad, pad, w-pad, h-pad), radius=int(h*.06), fill=c['panel'], outline=c['line'], width=max(2, w//640))
+    mark_size = int(h * .54)
+    mark = _draw_mark(mark_size, dark=dark, transparent=True)
+    im.alpha_composite(mark, (int(w*.075), int((h-mark_size)/2)))
+
+    split = int(w * .34)
+    d.line((split, int(h*.18), split, int(h*.82)), fill=c['line'], width=max(2, w//720))
+    tx = split + int(w*.055)
+    f1 = _fit(d, title, int(h*.094), int(w*.52))
+    f2 = _font(int(h*.042), bold=False)
+    d.text((tx, int(h*.28)), title, font=f1, fill=c['text'])
+    d.text((tx, int(h*.50)), subtitle, font=f2, fill=c['muted'])
+
+    fa = _font(int(h*.035))
+    tb = d.textbbox((0, 0), action, font=fa)
+    bw = tb[2]-tb[0] + int(h*.11)
+    bh = tb[3]-tb[1] + int(h*.065)
+    bx, by = tx, int(h*.66)
+    d.rounded_rectangle((bx, by, bx+bw, by+bh), radius=int(bh*.45), fill=c['accent'])
+    d.text((bx+int(h*.055), by+int(h*.018)), action, font=fa, fill=(255,255,255,255))
     return im
 
-def _portrait_card(w,h,title,kind='new'):
-    c=_palette(False)
-    im=_gradient((w,h),(235,243,241,255),(250,251,249,255)).convert('RGBA')
-    im=_grid_overlay(im,c['cyan'],spacing=44,alpha=15)
-    d=ImageDraw.Draw(im)
-    sig=_draw_sigil(int(w*.68),transparent=True,dark=False)
-    im.alpha_composite(sig,(int(w*.16),int(h*.12)))
-    f=_fit_text(d,title,_font(int(w*.12)),int(w*.82))
-    box=d.textbbox((0,0),title,font=f); tw=box[2]-box[0]
-    d.text(((w-tw)/2,int(h*.68)),title,font=f,fill=c['text'])
-    sub='СОЗДАТЬ' if kind=='new' else 'ОТКРЫТЬ'
-    fs=_font(int(w*.07),bold=False); box=d.textbbox((0,0),sub,font=fs); tw=box[2]-box[0]
-    d.text(((w-tw)/2,int(h*.82)),sub,font=fs,fill=c['cyan'])
+
+def _portrait_card(w: int, h: int, title: str, action: str):
+    c = _palette(False)
+    im = _gradient((w, h), (249, 250, 250, 255), (238, 243, 243, 255))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle((12, 12, w-12, h-12), radius=18, outline=c['line'], width=2)
+    mark = _draw_mark(int(w*.55), dark=False, transparent=True)
+    im.alpha_composite(mark, (int(w*.225), int(h*.14)))
+    f = _fit(d, title, int(w*.11), int(w*.82))
+    box = d.textbbox((0,0), title, font=f)
+    d.text(((w-(box[2]-box[0]))/2, int(h*.66)), title, font=f, fill=c['text'])
+    fa = _font(int(w*.06), bold=False)
+    box = d.textbbox((0,0), action, font=fa)
+    d.text(((w-(box[2]-box[0]))/2, int(h*.82)), action, font=fa, fill=c['accent'])
     return im
 
-def _paper_background(w,h):
-    im=_gradient((w,h),(247,249,248,255),(233,240,238,255)).convert('RGBA')
-    d=ImageDraw.Draw(im)
-    col=(47,130,130,18)
-    step=96
-    for y in range(0,h,step):
-        for x in range(0,w,step):
-            d.ellipse((x-2,y-2,x+2,y+2),fill=col)
+
+def _paper_background(w: int, h: int):
+    # Neutral sheet surface: almost flat, deliberately no ornament pattern.
+    return _gradient((w, h), (249, 250, 250, 255), (241, 244, 244, 255))
+
+
+def _blank_portrait(w: int, h: int):
+    c = _palette(False)
+    im = _paper_background(w, h)
+    d = ImageDraw.Draw(im)
+    cx = w / 2
+    d.ellipse((cx-w*.12, h*.19, cx+w*.12, h*.39), fill=(177, 188, 191, 255))
+    d.rounded_rectangle((w*.24, h*.43, w*.76, h*.82), radius=int(w*.15), fill=(177, 188, 191, 255))
     return im
 
-def _blank_portrait(w,h):
-    c=_palette(False); im=_paper_background(w,h); d=ImageDraw.Draw(im)
-    cx=w/2
-    d.ellipse((cx-w*.12,h*.18,cx+w*.12,h*.42),fill=(168,186,187,255))
-    d.rounded_rectangle((w*.22,h*.43,w*.78,h*.86),radius=w*.18,fill=(168,186,187,255))
-    sig=_draw_sigil(int(w*.22),transparent=True,dark=False); im.alpha_composite(sig,(int(w*.39),int(h*.62)))
+
+def _brace(w: int, h: int, side: str):
+    # Minimal separators replacing ornate fantasy braces.
+    c = _palette(False)
+    im = Image.new('RGBA', (w, h), (0,0,0,0))
+    d = ImageDraw.Draw(im)
+    lw = max(2, min(w,h)//28)
+    if side == 'top':
+        y = int(h*.66)
+        d.line((int(w*.12), y, int(w*.88), y), fill=c['line'], width=lw)
+        d.line((int(w*.40), y, int(w*.60), y), fill=c['accent'], width=lw+1)
+    elif side == 'tl':
+        d.line((w*.20,h*.82,w*.20,h*.30,w*.72,h*.30), fill=c['line'], width=lw)
+    elif side == 'tr':
+        d.line((w*.80,h*.82,w*.80,h*.30,w*.28,h*.30), fill=c['line'], width=lw)
+    elif side == 'bl':
+        d.line((w*.20,h*.18,w*.20,h*.70,w*.72,h*.70), fill=c['line'], width=lw)
+    else:
+        d.line((w*.80,h*.18,w*.80,h*.70,w*.28,h*.70), fill=c['line'], width=lw)
     return im
 
-def _action_icon(size,label,dark=False):
-    c=_palette(dark); im=Image.new('RGBA',(size,size),(0,0,0,0)); d=ImageDraw.Draw(im)
-    pad=size*.10
-    d.rounded_rectangle((pad,pad,size-pad,size-pad),radius=size*.25,fill=c['panel'],outline=c['cyan'],width=max(2,size//18))
-    f=_font(int(size*.42)); box=d.textbbox((0,0),label,font=f); tw=box[2]-box[0]; th=box[3]-box[1]
-    d.text(((size-tw)/2,(size-th)/2-size*.05),label,font=f,fill=c['text'])
-    return im
 
 def generate_brand_assets(out_dir: Path):
-    out_dir=Path(out_dir); out_dir.mkdir(parents=True,exist_ok=True)
-    densities={'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
-    adaptive={'mdpi':108,'hdpi':162,'xhdpi':216,'xxhdpi':324,'xxxhdpi':432}
-    files={}
-    def save(rel,im,fmt=None,**kw):
-        p=out_dir/rel; p.parent.mkdir(parents=True,exist_ok=True)
-        if fmt is None: fmt=Path(rel).suffix.lstrip('.').upper()
-        if fmt=='JPG': fmt='JPEG'
-        if fmt=='WEBP' and im.mode=='RGBA': im.save(p,fmt,lossless=True,**kw)
-        else: im.convert('RGB' if fmt in ('JPEG','WEBP') else im.mode).save(p,fmt,**kw)
-        files[str(p.relative_to(out_dir))]=p
-    for den,size in densities.items():
-        save(f'res/mipmap-{den}-v4/ic_launcher.webp',_draw_sigil(size), 'WEBP')
-        mark=_draw_sigil(size,transparent=True,dark=True)
-        circ=Image.new('L',(size,size),0); ImageDraw.Draw(circ).ellipse((0,0,size-1,size-1),fill=255)
-        bg=Image.new('RGBA',(size,size),_palette(True)['bg']); bg.alpha_composite(mark); bg.putalpha(circ)
-        save(f'res/mipmap-{den}-v4/ic_launcher_round.webp',bg,'WEBP')
-    for den,size in adaptive.items():
-        save(f'res/mipmap-{den}-v4/ic_launcher_background.webp',Image.new('RGBA',(size,size),_palette(True)['bg']),'WEBP')
-        save(f'res/mipmap-{den}-v4/ic_launcher_foreground.webp',_draw_sigil(size,transparent=True,dark=True),'WEBP')
-    for name,dark in [('logo.png',False),('logo_dark.png',True),('logo_white.png',True)]:
-        save(f'res/drawable/{name}',_draw_sigil(256,transparent=True,dark=dark),'PNG')
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    files = {}
 
-    W,H=1000,200; c=_palette(True); im=_gradient((W,H),(10,18,26,255),(21,36,44,255)); im=_grid_overlay(im,c['cyan'],76,18); d=ImageDraw.Draw(im)
-    mark=_draw_sigil(160,transparent=True,dark=True); im.alpha_composite(mark,(24,20))
-    title='RuneSheet RU'; f=_font(70); d.text((215,34),title,font=f,fill=c['text'])
-    sub='Персонаж • правила • сессия'; f2=_font(27,bold=False); d.text((219,120),sub,font=f2,fill=c['muted'])
-    save('res/drawable/logo_red.jpg',im,'JPEG',quality=94)
-
-    for dark,suf in [(False,''),(True,'_dark')]:
-        save(f'res/drawable-xxhdpi-v4/frontpage_new_character{suf}_horizontal.png',_front_card(1280,548,'НОВЫЙ ПЕРСОНАЖ','Начать сборку героя','new',dark),'PNG')
-        save(f'res/drawable-xxhdpi-v4/frontpage_load_character{suf}_horizontal.png',_front_card(1280,548,'МОИ ПЕРСОНАЖИ','Продолжить или импортировать','load',dark),'PNG')
-    save('res/drawable/img_new.jpg',_portrait_card(300,500,'НОВЫЙ','new'),'JPEG',quality=94)
-    save('res/drawable/img_load.jpg',_portrait_card(300,500,'ПЕРСОНАЖИ','load'),'JPEG',quality=94)
-
-    save('res/drawable-xxhdpi-v4/parchment.jpg',_paper_background(1280,1920),'JPEG',quality=92)
-    save('res/drawable/portrait_blank.jpg',_blank_portrait(208,312),'JPEG',quality=92)
-    save('assets/portrait_blank.jpg',_blank_portrait(208,312),'JPEG',quality=92)
-
-    def brace(w,h,side='top'):
-        im=Image.new('RGBA',(w,h),(0,0,0,0)); d=ImageDraw.Draw(im); c=_palette(False)
-        lw=max(2,min(w,h)//22); col=c['cyan']; col2=c['amber']
-        if side=='top':
-            y=int(h*.72); d.line((int(w*.08),y,int(w*.92),y),fill=col,width=lw)
-            d.line((int(w*.18),y-int(h*.08),int(w*.82),y-int(h*.08)),fill=col2,width=max(1,lw//2))
-            for x in (int(w*.08),int(w*.92)):
-                d.ellipse((x-lw*2,y-lw*2,x+lw*2,y+lw*2),fill=col)
-        elif side=='tl':
-            d.line((w*.18,h*.82,w*.18,h*.28,w*.72,h*.28),fill=col,width=lw)
-            d.line((w*.30,h*.70,w*.30,h*.42,w*.58,h*.42),fill=col2,width=max(1,lw//2))
-        elif side=='tr':
-            d.line((w*.82,h*.82,w*.82,h*.28,w*.28,h*.28),fill=col,width=lw)
-            d.line((w*.70,h*.70,w*.70,h*.42,w*.42,h*.42),fill=col2,width=max(1,lw//2))
-        elif side=='bl':
-            d.line((w*.18,h*.18,w*.18,h*.72,w*.72,h*.72),fill=col,width=lw)
-            d.line((w*.30,h*.30,w*.30,h*.58,w*.58,h*.58),fill=col2,width=max(1,lw//2))
+    def save(rel, im, fmt=None, **kw):
+        p = out_dir / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        if fmt is None:
+            fmt = Path(rel).suffix.lstrip('.').upper()
+        if fmt == 'JPG':
+            fmt = 'JPEG'
+        if fmt == 'WEBP' and im.mode == 'RGBA':
+            im.save(p, fmt, lossless=True, **kw)
         else:
-            d.line((w*.82,h*.18,w*.82,h*.72,w*.28,h*.72),fill=col,width=lw)
-            d.line((w*.70,h*.30,w*.70,h*.58,w*.42,h*.58),fill=col2,width=max(1,lw//2))
-        return im
-    save('res/drawable/brace_top.png',brace(451,160,'top'),'PNG')
-    save('res/drawable/brace_top_left.png',brace(133,100,'tl'),'PNG')
-    save('res/drawable/brace_top_right.png',brace(133,100,'tr'),'PNG')
-    save('res/drawable/brace_bottom_left.png',brace(133,100,'bl'),'PNG')
-    save('res/drawable/brace_bottom_right.png',brace(133,100,'br'),'PNG')
-    strip=Image.new('RGBA',(512,135),(246,249,248,238)); sd=ImageDraw.Draw(strip); cc=_palette(False)
-    sd.rounded_rectangle((4,4,507,130),radius=18,outline=cc['cyan'],width=3)
-    sd.line((28,20,484,20),fill=cc['amber'],width=2)
-    save('res/drawable/scroll_background.png',strip,'PNG')
+            im.convert('RGB' if fmt in ('JPEG','WEBP') else im.mode).save(p, fmt, **kw)
+        files[str(p.relative_to(out_dir))] = p
 
-    prev=_paper_background(400,300); pd=ImageDraw.Draw(prev); pc=_palette(False)
-    for y,label in [(42,'Имя персонажа'),(105,'Народ'),(168,'Класс')]:
-        pd.rounded_rectangle((28,y,372,y+48),radius=12,fill=pc['panel'],outline=pc['cyan'],width=2)
-        pd.text((48,y+12),label,font=_font(18,bold=False),fill=pc['text'])
-    pd.rounded_rectangle((28,238,372,278),radius=12,fill=pc['panel2'])
-    pd.text((150,247),'УРОВЕНЬ 1',font=_font(16),fill=pc['text'])
-    save('res/drawable/theme_picture_ornate.jpg',prev,'JPEG',quality=92)
+    densities = {'mdpi':48,'hdpi':72,'xhdpi':96,'xxhdpi':144,'xxxhdpi':192}
+    adaptive = {'mdpi':108,'hdpi':162,'xhdpi':216,'xxhdpi':324,'xxxhdpi':432}
+    for den, size in densities.items():
+        save(f'res/mipmap-{den}-v4/ic_launcher.webp', _draw_mark(size, dark=True, transparent=False), 'WEBP')
+        mark = _draw_mark(size, dark=True, transparent=True)
+        mask = Image.new('L', (size,size), 0)
+        ImageDraw.Draw(mask).ellipse((0,0,size-1,size-1), fill=255)
+        bg = Image.new('RGBA', (size,size), _palette(True)['bg'])
+        bg.alpha_composite(mark)
+        bg.putalpha(mask)
+        save(f'res/mipmap-{den}-v4/ic_launcher_round.webp', bg, 'WEBP')
+    for den, size in adaptive.items():
+        save(f'res/mipmap-{den}-v4/ic_launcher_background.webp', Image.new('RGBA',(size,size),_palette(True)['bg']), 'WEBP')
+        save(f'res/mipmap-{den}-v4/ic_launcher_foreground.webp', _draw_mark(size, dark=True, transparent=True), 'WEBP')
 
-    for rel,label,dark in [
-        ('res/drawable/action_single.png','1',False),('res/drawable/action_double.png','2',False),
-        ('res/drawable/action_triple.png','3',False),('res/drawable/action_reaction.png','R',False),
-        ('res/drawable/action_free.png','F',False),
-        ('assets/Images/Actions/action_single.png','1',False),('assets/Images/Actions/action_double.png','2',False),
-        ('assets/Images/Actions/action_triple.png','3',False),('assets/Images/Actions/action_reaction.png','R',False),
-        ('assets/Images/Actions/action_free.png','F',False),
-    ]:
-        dims={'action_single.png':(200,200),'action_double.png':(286,200),'action_triple.png':(375,200),'action_reaction.png':(200,200),'action_free.png':(200,200)}
-        name=Path(rel).name; w,h=dims[name]
-        icon=_action_icon(min(w,h),label,dark)
-        canvas=Image.new('RGBA',(w,h),(0,0,0,0)); canvas.alpha_composite(icon,((w-icon.width)//2,(h-icon.height)//2))
-        save(rel,canvas,'PNG')
+    save('res/drawable/logo.png', _draw_mark(256, dark=False, transparent=True), 'PNG')
+    save('res/drawable/logo_dark.png', _draw_mark(256, dark=True, transparent=True), 'PNG')
+    save('res/drawable/logo_white.png', _draw_mark(256, dark=True, transparent=True), 'PNG')
+
+    W,H = 1000,200
+    c = _palette(True)
+    im = _gradient((W,H), (16,23,28,255), (24,33,39,255))
+    d = ImageDraw.Draw(im)
+    mark = _draw_mark(132, dark=True, transparent=True)
+    im.alpha_composite(mark, (34,34))
+    d.text((205,42), 'RuneSheet RU', font=_font(62), fill=c['text'])
+    d.text((209,119), 'персонаж • правила • сессия', font=_font(24,bold=False), fill=c['muted'])
+    save('res/drawable/logo_red.jpg', im, 'JPEG', quality=94)
+
+    for dark, suf in [(False,''),(True,'_dark')]:
+        save(f'res/drawable-xxhdpi-v4/frontpage_new_character{suf}_horizontal.png', _front_card(1280,548,'НОВЫЙ ПЕРСОНАЖ','Начать сборку героя','СОЗДАТЬ',dark=dark), 'PNG')
+        save(f'res/drawable-xxhdpi-v4/frontpage_load_character{suf}_horizontal.png', _front_card(1280,548,'МОИ ПЕРСОНАЖИ','Продолжить или импортировать','ОТКРЫТЬ',dark=dark), 'PNG')
+    save('res/drawable/img_new.jpg', _portrait_card(300,500,'НОВЫЙ','СОЗДАТЬ'), 'JPEG', quality=94)
+    save('res/drawable/img_load.jpg', _portrait_card(300,500,'ПЕРСОНАЖИ','ОТКРЫТЬ'), 'JPEG', quality=94)
+
+    save('res/drawable-xxhdpi-v4/parchment.jpg', _paper_background(1280,1920), 'JPEG', quality=94)
+    save('res/drawable/portrait_blank.jpg', _blank_portrait(208,312), 'JPEG', quality=92)
+    save('assets/portrait_blank.jpg', _blank_portrait(208,312), 'JPEG', quality=92)
+
+    save('res/drawable/brace_top.png', _brace(451,160,'top'), 'PNG')
+    save('res/drawable/brace_top_left.png', _brace(133,100,'tl'), 'PNG')
+    save('res/drawable/brace_top_right.png', _brace(133,100,'tr'), 'PNG')
+    save('res/drawable/brace_bottom_left.png', _brace(133,100,'bl'), 'PNG')
+    save('res/drawable/brace_bottom_right.png', _brace(133,100,'br'), 'PNG')
+
+    strip = Image.new('RGBA', (512,135), (250,251,251,245))
+    sd = ImageDraw.Draw(strip)
+    cc = _palette(False)
+    sd.rounded_rectangle((4,4,507,130), radius=14, outline=cc['line'], width=2)
+    sd.line((28,20,484,20), fill=cc['accent'], width=2)
+    save('res/drawable/scroll_background.png', strip, 'PNG')
+
+    prev = _paper_background(400,300)
+    pd = ImageDraw.Draw(prev)
+    pc = _palette(False)
+    for y, label in [(42,'Имя персонажа'),(105,'Народ'),(168,'Класс')]:
+        pd.rounded_rectangle((28,y,372,y+48), radius=10, fill=pc['panel'], outline=pc['line'], width=2)
+        pd.text((48,y+12), label, font=_font(18,bold=False), fill=pc['text'])
+    pd.rounded_rectangle((28,238,372,278), radius=10, fill=pc['panel2'])
+    pd.text((150,247), 'УРОВЕНЬ 1', font=_font(16), fill=pc['text'])
+    save('res/drawable/theme_picture_ornate.jpg', prev, 'JPEG', quality=94)
+
     return files
