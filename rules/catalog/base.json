@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "pf2eru.project-base",
+  "provenance": {
+    "source": "PF2e Builder RU project",
+    "license": "MIT (project metadata only)",
+    "notes": "Intentionally empty bootstrap catalog. Licensed game data will be added only with explicit provenance."
+  },
+  "entities": []
+}

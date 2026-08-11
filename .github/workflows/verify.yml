@@ -16,3 +16,5 @@ jobs:
         run: python -m py_compile build.py scripts/*.py
       - name: Check project invariants
         run: python scripts/selftest.py
+      - name: Validate source-controlled rules catalogs
+        run: python scripts/validate_rules.py rules/catalog
