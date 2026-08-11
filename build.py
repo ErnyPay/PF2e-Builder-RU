@@ -8,7 +8,14 @@ from dex_patch import patch_exact_strings
 from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
-from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout
+from reskin_patch import (
+    FRONTPAGE_LAYOUTS,
+    patch_frontpage_layout,
+    patch_level_layout,
+    patch_play_navigation,
+    patch_build_navigation,
+    patch_topnav_slider,
+)
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
 
@@ -32,32 +39,34 @@ def main():
     if not pw: raise SystemExit('Set PF2E_KEYSTORE_PASSWORD; the signing key/password are intentionally not stored in Git.')
     args.out.parent.mkdir(parents=True,exist_ok=True)
     work=ROOT/'work'; work.mkdir(exist_ok=True)
-    brand=work/'branding';
+    brand=work/'branding'
     if brand.exists():
         import shutil; shutil.rmtree(brand)
     generate_brand_assets(brand)
     generate_action_assets(brand)
 
     with zipfile.ZipFile(args.base) as z:
+        names=set(z.namelist())
         manifest=z.read('AndroidManifest.xml'); arsc=z.read('resources.arsc'); c2=z.read('classes2.dex')
         layout_overrides={}
         for path in FRONTPAGE_LAYOUTS:
-            if path in z.namelist(): layout_overrides[path]=patch_frontpage_layout(z.read(path))
-        if 'res/layout/layout_level_navigation.xml' in z.namelist():
+            if path in names: layout_overrides[path]=patch_frontpage_layout(z.read(path))
+        if 'res/layout/layout_level_navigation.xml' in names:
             layout_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation.xml'),play=False)
-        if 'res/layout/layout_level_navigation_play.xml' in z.namelist():
+        if 'res/layout/layout_level_navigation_play.xml' in names:
             layout_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation_play.xml'),play=True)
+        if 'res/layout/activity_content_play_mode.xml' in names:
+            layout_overrides['res/layout/activity_content_play_mode.xml']=patch_play_navigation(z.read('res/layout/activity_content_play_mode.xml'))
+        if 'res/layout/totalfragment_build_navigation.xml' in names:
+            layout_overrides['res/layout/totalfragment_build_navigation.xml']=patch_build_navigation(z.read('res/layout/totalfragment_build_navigation.xml'))
+        if 'res/drawable/background_topnav_slider.xml' in names:
+            layout_overrides['res/drawable/background_topnav_slider.xml']=patch_topnav_slider(z.read('res/drawable/background_topnav_slider.xml'))
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
-    # Only patch the product name literal. Do not globally rewrite theme colors in
-    # resources.arsc: several navigation widgets use stateful resources whose
-    # contrast was broken by the alpha.8 broad palette replacement.
+    # Product-name-only ARSC patch. Never globally rewrite theme colors: stateful
+    # navigation resources are shared across unrelated inherited widgets.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
-    repl={
-        old:new,
-        f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',
-        old+'.provider':cfg['file_provider_authority'],
-    }
+    repl={old:new,f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',old+'.provider':cfg['file_provider_authority']}
     c2=patch_exact_strings(c2,repl)
     overrides={'AndroidManifest.xml':manifest,'resources.arsc':arsc,'classes2.dex':c2}
     overrides.update(layout_overrides)
