@@ -3,6 +3,15 @@ from pathlib import Path
 import hashlib,struct,subprocess,zipfile
 
 
+# Polished round5 content is a product baseline, not a migration source.
+# Branding/code changes must not mutate these assets unless a dedicated
+# content-change task explicitly updates the baseline hashes.
+PROTECTED_ASSET_SHA256={
+    'assets/master.db':'06f09830b2e578dd1ab01730537ec76b9b05e37a68902fe744a9f6c37b889b81',
+    'assets/remaster.db':'8485608ddf46b3b5437bd8b051b2d47fa6118b0bfaa5187a59bdd3f831289f1d',
+}
+
+
 def dex_units(d:bytes):
     u32=lambda o:struct.unpack_from('<I',d,o)[0]
     ss,so=u32(0x38),u32(0x3c)
@@ -33,10 +42,28 @@ def verify_dex(d:bytes):
     vals=dex_units(d); sorted_ok=all(vals[i-1] < vals[i] for i in range(1,len(vals)))
     return sig_ok and chk_ok and sorted_ok, {'sha1':sig_ok,'adler32':chk_ok,'sorted_strings':sorted_ok,'strings':len(vals)}
 
-def verify(apk:Path, expected_package_strings=None):
+
+def _verify_protected_assets(z:zipfile.ZipFile, expected):
+    result={}
+    for name,want in expected.items():
+        try:
+            data=z.read(name)
+        except KeyError as exc:
+            raise RuntimeError(f'Protected content asset missing: {name}') from exc
+        got=hashlib.sha256(data).hexdigest()
+        ok=got==want
+        result[name]={'ok':ok,'sha256':got,'expected_sha256':want,'bytes':len(data)}
+        if not ok:
+            raise RuntimeError(f'Protected content asset changed: {name}; expected {want}, got {got}')
+    return result
+
+
+def verify(apk:Path, expected_package_strings=None, protected_assets=PROTECTED_ASSET_SHA256):
     out={'apk':str(apk),'sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'dex':{}}
     with zipfile.ZipFile(apk) as z:
         bad=z.testzip(); out['zip_ok']=bad is None
+        if protected_assets:
+            out['protected_assets']=_verify_protected_assets(z,protected_assets)
         for n in z.namelist():
             if n.startswith('classes') and n.endswith('.dex'):
                 ok,detail=verify_dex(z.read(n)); out['dex'][n]=detail
