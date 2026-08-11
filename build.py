@@ -8,7 +8,7 @@ from dex_patch import patch_exact_strings
 from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
-from product_components import PATCH_MODES, ICON_NAMES, patch_component_drawable, patch_activity_main, recolor_icon
+from product_components import patch_activity_main
 from reskin_patch import (
     FRONTPAGE_LAYOUTS,
     patch_frontpage_layout,
@@ -64,15 +64,10 @@ def main():
             resource_overrides['res/drawable/background_topnav_slider.xml']=patch_topnav_slider(z.read('res/drawable/background_topnav_slider.xml'))
         if 'res/layout/activity_main.xml' in names:
             resource_overrides['res/layout/activity_main.xml']=patch_activity_main(z.read('res/layout/activity_main.xml'))
-        for path,mode in PATCH_MODES.items():
-            if path in names: resource_overrides[path]=patch_component_drawable(z.read(path),mode)
-        for name in ICON_NAMES:
-            path='res/drawable/'+name
-            if path in names: resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
 
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
-    # Product-name-only ARSC patch. Never globally rewrite theme colors: stateful
-    # navigation resources are shared across unrelated inherited widgets.
+    # Only rename the product literal. Component backgrounds/text colors are kept
+    # from the polished baseline until they can be migrated as matched pairs.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
     repl={
