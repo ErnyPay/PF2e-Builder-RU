@@ -1,9 +1,9 @@
 {
   "app_name": "RuneSheet RU",
-  "application_id": "com.pf2ebuilder.ru.builderx",
-  "version_name": "0.3.0-alpha.4",
-  "version_code": 304,
-  "file_provider_authority": "com.redrazors.pathbuilder2e.pf2ruapp",
+  "application_id": "com.pf2ebuilder.ru.producty",
+  "version_name": "0.3.0-alpha.14",
+  "version_code": 314,
+  "file_provider_authority": "com.runesheet.producty.file.provider",
   "base_apk_sha256": "ae96941d1d68153d96118582ae550b267b3008e7ded9c8a1357e1e54560a70fd",
   "base_apk_hint": "Pathbuilder2e_256_RU_DB76_round5_polished.apk"
 }
