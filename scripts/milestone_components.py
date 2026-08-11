@@ -196,4 +196,7 @@ def harden_manifest_privacy(blob: bytes, *, application_id: str) -> bytes:
                     raise ValueError(f'cannot safely disable {value}: missing enabled attribute')
                 _set_typed(out, amap['enabled'][0], TYPE_INT_BOOLEAN, 0)
 
-    return bytes(out)
+    # Second layer: detach inherited ads startup, install-referrer and Firebase
+    # AnalyticsConnector while deliberately keeping Billing and Firebase Auth/DB.
+    from ownership_runtime_pass import harden_owned_runtime
+    return harden_owned_runtime(bytes(out), application_id=application_id)
