@@ -1,28 +1,34 @@
 from __future__ import annotations
 
 import struct
-import zipfile
 
 from manifest_patch import (
     NO_INDEX,
-    RES_XML_START_ELEMENT_TYPE,
-    TYPE_STRING,
     _find_manifest_pool,
     _iter_start_elements,
     _put_u32,
-    _u16,
     _u32,
     build_string_pool,
 )
 
 TYPE_REFERENCE = 0x01
+TYPE_COLOR = 0x1C
 TYPE_DIMENSION = 0x05
 
 # Stable resource IDs in the pinned polished 2.56 baseline.
 ID_BUTTON_UPDATE = 0x7F09011D
 ID_BUILD_LEVEL = 0x7F090456
 ID_PLAY_LEVEL = 0x7F090510
+ID_PLAY_SELECTED_TAB = 0x7F0902A7
 COLOR_STANDARD_TEXT = 0x7F05031A
+
+# Inherited top-navigation background resource IDs in the pinned baseline.
+COLOR_BUILD_HEADER = 0x7F05008D
+COLOR_PLAY_HEADER = 0x7F05008E
+
+GRAPHITE = 0xFF172429
+TEAL = 0xFF26958F
+WHITE = 0xFFFFFFFF
 
 FRONTPAGE_LAYOUTS = (
     "res/layout/activity_content_frontpage_plain.xml",
@@ -66,11 +72,10 @@ def patch_frontpage_layout(blob: bytes) -> bytes:
     )
     pool = _find_manifest_pool(blob)
     out = bytearray(blob)
-    for _, tag, attrs in _iter_start_elements(bytes(out), pool.strings):
+    for _, _, attrs in _iter_start_elements(bytes(out), pool.strings):
         amap = {name: (offset, raw, dtype, data) for offset, name, raw, dtype, data in attrs}
-        element_id = amap.get("id", (None, None, None, None))[3]
-        if element_id == ID_BUTTON_UPDATE:
-            # Keep the inherited update/version code intact, but remove its product UI surface.
+        if amap.get("id", (None, None, None, None))[3] == ID_BUTTON_UPDATE:
+            # Hide the inherited version/update surface without touching its runtime code.
             for name in ("layout_height", "padding"):
                 if name in amap:
                     _set_typed(out, amap[name][0], TYPE_DIMENSION, 0x00000001)  # 0dp
@@ -88,117 +93,59 @@ def patch_level_layout(blob: bytes, *, play: bool) -> bytes:
         if amap.get("id", (None, None, None, None))[3] != target:
             continue
         if "textColor" in amap:
-            _set_typed(out, amap["textColor"][0], TYPE_REFERENCE, COLOR_STANDARD_TEXT)
+            _set_typed(out, amap["textColor"][0], TYPE_COLOR, WHITE)
         if "textSize" in amap:
-            _set_typed(out, amap["textSize"][0], TYPE_DIMENSION, 0x1001 if play else 0x1201)  # 16sp / 18sp
+            _set_typed(out, amap["textSize"][0], TYPE_DIMENSION, 0x1001 if play else 0x1101)  # 16/17sp
     return bytes(out)
 
 
-def _read_pool(blob: bytes | bytearray, off: int) -> tuple[list[str], int]:
-    typ, hs, size = struct.unpack_from("<HHI", blob, off)
-    if typ != 0x0001:
-        raise ValueError("not a resource string pool")
-    sc, _, flags, strings_start, _ = struct.unpack_from("<IIIII", blob, off + 8)
-    offsets = [struct.unpack_from("<I", blob, off + hs + 4 * i)[0] for i in range(sc)]
-    base = off + strings_start
-    strings: list[str] = []
-    for rel in offsets:
-        q = base + rel
-        if flags & 0x100:
-            x = blob[q]; q += 1
-            if x & 0x80:
-                q += 1
-            x = blob[q]; q += 1
-            if x & 0x80:
-                byte_len = ((x & 0x7F) << 8) | blob[q]; q += 1
-            else:
-                byte_len = x
-            strings.append(bytes(blob[q:q + byte_len]).decode("utf-8", "replace"))
-        else:
-            x = struct.unpack_from("<H", blob, q)[0]; q += 2
-            if x & 0x8000:
-                y = struct.unpack_from("<H", blob, q)[0]; q += 2
-                char_len = ((x & 0x7FFF) << 16) | y
-            else:
-                char_len = x
-            strings.append(bytes(blob[q:q + char_len * 2]).decode("utf-16le", "replace"))
-    return strings, size
+def patch_play_navigation(blob: bytes) -> bytes:
+    """Patch only the play-mode top-navigation component.
 
-
-def patch_product_palette(blob: bytes) -> bytes:
+    This deliberately avoids global resources.arsc palette changes because the
+    inherited app reuses stateful colors across unrelated widgets.
+    """
+    pool = _find_manifest_pool(blob)
     out = bytearray(blob)
-    root_type, root_hs, root_size = struct.unpack_from("<HHI", out, 0)
-    if root_type != 0x0002:
-        raise ValueError("unexpected resources.arsc root")
-    off = root_hs
-    _, global_pool_size = _read_pool(out, off)
-    off += global_pool_size
-
-    desired = {
-        "colorAccent": 0xFF228A89,
-        "colorAccentFade": 0xFFDCECEB,
-        "colorPrimary": 0xFF228A89,
-        "colorPrimaryDark": 0xFF102F35,
-        "colorPrimaryFifty": 0xFF67B8B4,
-        "colorPrimaryNotAsDark": 0xFF185E63,
-        "colorPrimaryVeryFaded": 0xFFB8DAD7,
-    }
-    patched: set[str] = set()
-
-    while off < root_size:
-        chunk_type, header_size, chunk_size = struct.unpack_from("<HHI", out, off)
-        if chunk_type == 0x0200:
-            type_strings_off = struct.unpack_from("<I", out, off + 268)[0]
-            key_strings_off = struct.unpack_from("<I", out, off + 276)[0]
-            types, _ = _read_pool(out, off + type_strings_off)
-            keys, _ = _read_pool(out, off + key_strings_off)
-            q = off + header_size
-            while q < off + chunk_size:
-                child_type, child_header, child_size = struct.unpack_from("<HHI", out, q)
-                if child_type == 0x0201:
-                    type_id = out[q + 8]
-                    entry_count = struct.unpack_from("<I", out, q + 12)[0]
-                    entries_start = struct.unpack_from("<I", out, q + 16)[0]
-                    type_name = types[type_id - 1] if 0 < type_id <= len(types) else ""
-                    if type_name == "color":
-                        for i in range(entry_count):
-                            rel = struct.unpack_from("<I", out, q + child_header + 4 * i)[0]
-                            if rel == 0xFFFFFFFF:
-                                continue
-                            entry = q + entries_start + rel
-                            entry_size, flags, key_index = struct.unpack_from("<HHI", out, entry)
-                            if flags & 1 or key_index >= len(keys):
-                                continue
-                            name = keys[key_index]
-                            if name not in desired:
-                                continue
-                            value_off = entry + entry_size
-                            dtype = out[value_off + 3]
-                            if not 0x1C <= dtype <= 0x1F:
-                                raise ValueError(f"{name} is not a direct color")
-                            struct.pack_into("<I", out, value_off + 4, desired[name])
-                            patched.add(name)
-                q += child_size
-        off += chunk_size
-
-    missing = set(desired) - patched
-    if missing:
-        raise ValueError(f"missing palette resources: {sorted(missing)}")
+    for _, _, attrs in _iter_start_elements(bytes(out), pool.strings):
+        amap = {name: (offset, raw, dtype, data) for offset, name, raw, dtype, data in attrs}
+        element_id = amap.get("id", (None, None, None, None))[3]
+        if "background" in amap and amap["background"][3] == COLOR_PLAY_HEADER:
+            _set_typed(out, amap["background"][0], TYPE_COLOR, GRAPHITE)
+        if element_id == ID_PLAY_SELECTED_TAB:
+            if "layout_height" in amap:
+                _set_typed(out, amap["layout_height"][0], TYPE_DIMENSION, 0x2201)  # 34dp
+            if "layout_marginTop" in amap:
+                _set_typed(out, amap["layout_marginTop"][0], TYPE_DIMENSION, 0x0401)  # 4dp
+            if "layout_marginBottom" in amap:
+                _set_typed(out, amap["layout_marginBottom"][0], TYPE_DIMENSION, 0x0401)
     return bytes(out)
 
 
-def generate_reskin_overrides(apk: zipfile.ZipFile) -> dict[str, bytes]:
-    overrides: dict[str, bytes] = {"resources.arsc": patch_product_palette(apk.read("resources.arsc"))}
-    names = set(apk.namelist())
-    for path in FRONTPAGE_LAYOUTS:
-        if path in names:
-            overrides[path] = patch_frontpage_layout(apk.read(path))
-    if "res/layout/layout_level_navigation.xml" in names:
-        overrides["res/layout/layout_level_navigation.xml"] = patch_level_layout(
-            apk.read("res/layout/layout_level_navigation.xml"), play=False
-        )
-    if "res/layout/layout_level_navigation_play.xml" in names:
-        overrides["res/layout/layout_level_navigation_play.xml"] = patch_level_layout(
-            apk.read("res/layout/layout_level_navigation_play.xml"), play=True
-        )
-    return overrides
+def patch_build_navigation(blob: bytes) -> bytes:
+    """Patch only the build-mode top-navigation background."""
+    pool = _find_manifest_pool(blob)
+    out = bytearray(blob)
+    for _, _, attrs in _iter_start_elements(bytes(out), pool.strings):
+        amap = {name: (offset, raw, dtype, data) for offset, name, raw, dtype, data in attrs}
+        if "background" in amap and amap["background"][3] == COLOR_BUILD_HEADER:
+            _set_typed(out, amap["background"][0], TYPE_COLOR, GRAPHITE)
+    return bytes(out)
+
+
+def patch_topnav_slider(blob: bytes) -> bytes:
+    """Give the selected top tab a restrained teal rounded indicator."""
+    pool = _find_manifest_pool(blob)
+    out = bytearray(blob)
+    for _, tag, attrs in _iter_start_elements(bytes(out), pool.strings):
+        amap = {name: (offset, raw, dtype, data) for offset, name, raw, dtype, data in attrs}
+        if tag == "solid" and "color" in amap:
+            _set_typed(out, amap["color"][0], TYPE_COLOR, TEAL)
+        elif tag == "stroke":
+            if "color" in amap:
+                _set_typed(out, amap["color"][0], TYPE_COLOR, TEAL)
+            if "width" in amap:
+                _set_typed(out, amap["width"][0], TYPE_DIMENSION, 0x0101)  # 1dp
+        elif tag == "corners" and "radius" in amap:
+            _set_typed(out, amap["radius"][0], TYPE_DIMENSION, 0x0C01)  # 12dp
+    return bytes(out)
