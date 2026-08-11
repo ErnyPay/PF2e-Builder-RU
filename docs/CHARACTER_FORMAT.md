@@ -1,50 +1,30 @@
-# PF2e Builder RU character format
+# RuneSheet character format
 
-## Goals
+Current schema: `pf2e-builder-ru.character` v3.
 
-The native application owns its data format. It is versioned, locally exportable, testable and independent from any upstream backend.
+## Stable rules references
 
-## v2 envelope
+Starting with v3, character files preserve project-owned stable rule IDs separately from display text:
 
-```json
-{
-  "schema": "pf2e-builder-ru.character",
-  "version": 2,
-  "character": {
-    "id": "uuid",
-    "name": "Имя",
-    "level": 1,
-    "ancestry": "",
-    "background": "",
-    "className": "",
-    "attributes": {
-      "strength": 0,
-      "dexterity": 0,
-      "constitution": 0,
-      "intelligence": 0,
-      "wisdom": 0,
-      "charisma": 0
-    },
-    "notes": ""
-  }
-}
-```
+- `rules.ancestryId`
+- `rules.backgroundId`
+- `rules.classId`
 
-In the Russian UI `constitution` is displayed as **Выносливость** to match the project's PF2e RU terminology reference.
+Legacy `ancestry`, `background` and `className` strings remain in the file as readable/fallback display values. This lets translations and descriptions change without breaking saved characters.
 
-## v1 -> v2 migration
+Older v1/v2 exports remain importable. Missing stable IDs are resolved opportunistically in the UI by matching their legacy Russian/English names against the bundled rules catalog; unmatched text is preserved.
 
-The importer accepts both versions. A v1 character had no `attributes` object, so migration supplies `0` for all six modifiers. The next export writes v2.
+## Attributes
 
-## Compatibility rules
+The six attribute modifiers are stored under `attributes`:
 
-- Unknown schema identifiers are rejected rather than guessed.
-- Future format versions are rejected until an explicit migration exists.
-- Imported IDs replace the existing local record with the same ID; new IDs create a new local record.
-- Levels are normalized to 1–20.
-- Attribute modifier input is protected by wide corruption/import safety bounds; actual character-building legality belongs to the rules engine, not the storage codec.
-- Empty names receive a visible fallback instead of producing an unusable record.
+- `strength`
+- `dexterity`
+- `constitution`
+- `intelligence`
+- `wisdom`
+- `charisma`
 
-## Planned v3+
+## Compatibility
 
-Future versions will add independent typed sections for skills, ancestry/background/class selections, feats, equipment, spells, companions/familiars and calculated state. New sections should avoid encoding display-only Russian text as identity; stable project IDs reference rules-data entities instead.
+The format is project-owned and versioned independently from any transition/upstream storage. New fields must be added compatibly, and migrations should preserve unknown or legacy user-visible data whenever possible.
