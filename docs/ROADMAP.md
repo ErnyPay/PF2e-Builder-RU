@@ -9,37 +9,56 @@
 - [x] original launcher icon/logo generation;
 - [x] deterministic base-APK fingerprint check;
 - [x] v1/v2 signing and DEX verification;
-- [ ] device smoke test of side-by-side installation;
+- [ ] device smoke test of side-by-side transition alpha;
 - [ ] freeze and securely back up the release signing key.
 
-## 0.2 — Remove inherited service dependencies
+## 0.2 — Remove inherited service dependencies from transition build
 
-- [ ] inventory Google/Firebase/ads/billing dependencies;
+- [x] inventory Google/Firebase/ads/billing dependencies;
 - [ ] disable or replace features tied to the original package/store listing;
 - [ ] stop claiming original Pathbuilder deep links;
-- [ ] add our own About / diagnostics screen;
-- [ ] add explicit local backup/export flow.
+- [ ] add explicit local backup/export flow to transition build;
+- [ ] verify offline core after inherited network paths are disabled.
 
 ## 0.3 — Data ownership layer
 
-- [ ] define open JSON/SQLite schema for rules data;
+- [x] define v1 source-controlled catalog shape and provenance requirements;
+- [x] add CI validation for catalog IDs/provenance;
 - [ ] create importers from license-compatible sources;
 - [ ] move Russian terminology overrides into source control;
-- [ ] create automated English/mixed-string audit;
-- [ ] add ORC/OGL attribution generation where applicable.
+- [ ] create automated English/mixed-string audit for owned catalogs;
+- [ ] add attribution generation where applicable.
 
-## 0.4 — Native PF2e Builder RU shell
+## 0.4 — Native PF2e Builder RU
 
-- [ ] new Android project owned by this repository;
-- [ ] home/character-list screen;
-- [ ] character creation wizard;
-- [ ] character sheet;
-- [ ] feats/spells/equipment search;
-- [ ] import bridge from legacy local format.
+- [x] new Android project owned by this repository;
+- [x] own theme/icon and diagnostics screen;
+- [x] local character list;
+- [x] create/edit/delete basic character record;
+- [x] own versioned JSON character format v1;
+- [x] local JSON export/import;
+- [x] native CI producing a debug APK artifact;
+- [ ] migrate local repository to Room/SQLite;
+- [ ] ability/attribute model and calculations;
+- [ ] ancestry/background/class rules selection from owned rules catalog;
+- [ ] feats/spells/equipment domain modules;
+- [ ] transition/legacy character migration adapter.
+
+## 0.5 — Replace transition app feature-by-feature
+
+- [ ] character creation parity for core rules;
+- [ ] character sheet and level-up workflow;
+- [ ] equipment and inventory;
+- [ ] feats/actions;
+- [ ] spells/focus/preparations;
+- [ ] companions/familiars where supported by licensed data;
+- [ ] PDF/local share export;
+- [ ] migration tests against user-owned exported fixtures.
 
 ## 1.0
 
 - [ ] no runtime dependency on upstream APK code;
-- [ ] reproducible release build from source;
+- [ ] reproducible release build from source-controlled native project;
+- [ ] signed release/update workflow with protected secrets;
 - [ ] public distribution only after license/permission review;
-- [ ] migration path for users of alpha builds.
+- [ ] migration path for alpha users.
