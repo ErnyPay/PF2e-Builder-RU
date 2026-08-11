@@ -7,6 +7,7 @@ from manifest_patch import patch_manifest
 from dex_patch import patch_exact_strings
 from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
+from action_icons import generate_action_assets
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
 
@@ -18,7 +19,7 @@ def main():
     ap=argparse.ArgumentParser(description='Build RuneSheet RU transition APK from a locally supplied compatible base APK.')
     ap.add_argument('--base',required=True,type=Path)
     ap.add_argument('--keystore',type=Path,default=ROOT/'.local/pf2e-builder-ru-signing.p12')
-    ap.add_argument('--out',type=Path,default=ROOT/'dist/RuneSheet-RU-0.3.0-alpha.2.apk')
+    ap.add_argument('--out',type=Path,default=ROOT/'dist/RuneSheet-RU-0.3.0-alpha.3.apk')
     ap.add_argument('--allow-base-mismatch',action='store_true')
     args=ap.parse_args(); cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
     got=sha256(args.base)
@@ -32,6 +33,8 @@ def main():
     if brand.exists():
         import shutil; shutil.rmtree(brand)
     generate_brand_assets(brand)
+    # Overwrite the legacy numeric badges with project-owned action glyphs.
+    generate_action_assets(brand)
 
     with zipfile.ZipFile(args.base) as z:
         manifest=z.read('AndroidManifest.xml'); arsc=z.read('resources.arsc'); c2=z.read('classes2.dex')
