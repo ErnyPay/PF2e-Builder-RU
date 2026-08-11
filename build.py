@@ -20,6 +20,10 @@ from sheet_dialog_pass import (
     DIALOGS,LIST_ROWS,ROUND_RADII,patch_dialog_menu_item,patch_drawdown,
     patch_dynamic_level_header,patch_root_background,patch_selected_pill,patch_surface_shape,
 )
+from character_sheet_pass import (
+    SHEET_CARD_ROOTS,MINI_CARD_ROOTS,HEADER_IDS,SHEET_FRAGMENTS,
+    patch_root_card,patch_sheet_section_spacing,patch_header_pill,
+)
 from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_play_navigation,patch_build_navigation,patch_topnav_slider
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
@@ -69,7 +73,6 @@ def main():
         if 'res/layout/activity_main.xml' in names:
             resource_overrides['res/layout/activity_main.xml']=patch_activity_main(z.read('res/layout/activity_main.xml'))
 
-        # Contained components: surface + label are always migrated together.
         for path in sorted(BUTTON_LAYOUTS):
             if path in names: resource_overrides[path]=patch_button_layout(z.read(path))
         if 'res/layout/nav_header_main.xml' in names:
@@ -80,7 +83,6 @@ def main():
             path='res/drawable/'+name
             if path in names: resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
 
-        # Antique overlay: bright bronze/honey, no product burgundy.
         for path in sorted(BUTTON_LAYOUTS):
             if path in resource_overrides: resource_overrides[path]=patch_button_antique(resource_overrides[path])
         if 'res/layout/nav_header_main.xml' in resource_overrides:
@@ -93,7 +95,6 @@ def main():
             path='res/drawable/'+name
             if path in resource_overrides: resource_overrides[path]=recolor_icon_antique(resource_overrides[path])
 
-        # Static and dynamic level labels: keep both black/readable and unconstrained.
         if 'res/layout/layout_level_navigation.xml' in resource_overrides:
             resource_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation.xml'],play=False)
         if 'res/layout/layout_level_navigation_play.xml' in resource_overrides:
@@ -105,13 +106,11 @@ def main():
             resource_overrides['res/drawable/background_topnav_slider.xml']=patch_shape_antique(base_slider,fill=SELECTED_DARK,stroke=BRASS_LIGHT,radius_dp=18)
             resource_overrides['res/drawable/test_level_drawable.xml']=patch_shape_antique(base_slider,fill=BADGE_FILL,stroke=BRASS_DARK,radius_dp=22)
 
-        # Remove exact legacy product-red literals from compiled app XML.
         for path in sorted(n for n in names if n.endswith('.xml')):
             original=z.read(path); src=resource_overrides.get(path,original)
             patched=patch_direct_legacy_product_colors(src)
             if patched!=original or path in resource_overrides: resource_overrides[path]=patched
 
-        # First app rounding pass, then milestone-6 stronger card/dialog system.
         for path,radius in APP_ROUND_DRAWABLES.items():
             if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
 
@@ -135,10 +134,25 @@ def main():
         for path,radius in ROUND_RADII.items():
             if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
 
+        # Milestone 7: style the runtime-inflated character-sheet templates themselves.
+        for path in sorted(SHEET_CARD_ROOTS):
+            if path in names: resource_overrides[path]=patch_root_card(resource_overrides.get(path,z.read(path)),mini=False)
+        for path in sorted(MINI_CARD_ROOTS):
+            if path in names: resource_overrides[path]=patch_root_card(resource_overrides.get(path,z.read(path)),mini=True)
+        for path in sorted(SHEET_FRAGMENTS):
+            if path in names: resource_overrides[path]=patch_sheet_section_spacing(resource_overrides.get(path,z.read(path)))
+        for path,ids in HEADER_IDS.items():
+            if path not in names: continue
+            current=resource_overrides.get(path,z.read(path))
+            for target_id in ids: current=patch_header_pill(current,target_id)
+            resource_overrides[path]=current
+        # Large character cards are intentionally softer than generic dialog cards.
+        for path in ('res/drawable/rounded_rectangle_white_solid.xml','res/drawable/rounded_rectangle.xml'):
+            if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),38)
+
     manifest=patch_manifest(manifest,app_name=cfg['app_name'],application_id=cfg['application_id'],version_name=cfg['version_name'],version_code=cfg['version_code'],file_provider_authority=cfg['file_provider_authority'])
     manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
 
-    # Product-name change + precise product palette replacement. Material/error palettes remain untouched.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     arsc=patch_product_color_table(arsc)
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
