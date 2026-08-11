@@ -8,7 +8,7 @@ from dex_patch import patch_exact_strings
 from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
-from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_product_palette
+from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
 
@@ -48,8 +48,10 @@ def main():
         if 'res/layout/layout_level_navigation_play.xml' in z.namelist():
             layout_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation_play.xml'),play=True)
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
+    # Only patch the product name literal. Do not globally rewrite theme colors in
+    # resources.arsc: several navigation widgets use stateful resources whose
+    # contrast was broken by the alpha.8 broad palette replacement.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
-    arsc=patch_product_palette(arsc)
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
     repl={
         old:new,
