@@ -1,8 +1,8 @@
 {
   "app_name": "RuneSheet RU",
   "application_id": "com.pf2ebuilder.ru.producty",
-  "version_name": "0.4.0-milestone.7",
-  "version_code": 407,
+  "version_name": "0.4.0-milestone.8",
+  "version_code": 408,
   "file_provider_authority": "com.runesheet.producty.file.provider",
   "base_apk_sha256": "ae96941d1d68153d96118582ae550b267b3008e7ded9c8a1357e1e54560a70fd",
   "base_apk_hint": "Pathbuilder2e_256_RU_DB76_round5_polished.apk"
