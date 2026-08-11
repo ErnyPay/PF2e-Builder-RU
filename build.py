@@ -15,10 +15,10 @@ ROOT=Path(__file__).resolve().parent
 def sha256(p:Path): return hashlib.sha256(p.read_bytes()).hexdigest()
 
 def main():
-    ap=argparse.ArgumentParser(description='Build PF2e Builder RU from a locally supplied compatible base APK.')
+    ap=argparse.ArgumentParser(description='Build RuneSheet RU transition APK from a locally supplied compatible base APK.')
     ap.add_argument('--base',required=True,type=Path)
     ap.add_argument('--keystore',type=Path,default=ROOT/'.local/pf2e-builder-ru-signing.p12')
-    ap.add_argument('--out',type=Path,default=ROOT/'dist/PF2e-Builder-RU-0.1.0-alpha.1.apk')
+    ap.add_argument('--out',type=Path,default=ROOT/'dist/RuneSheet-RU-0.3.0-alpha.2.apk')
     ap.add_argument('--allow-base-mismatch',action='store_true')
     args=ap.parse_args(); cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
     got=sha256(args.base)
