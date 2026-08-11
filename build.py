@@ -29,6 +29,9 @@ from overflow_polish import (
     replace_product_shell_literals,replace_compatibility_shell_literals,
 )
 from ownership_runtime_pass import harden_owned_runtime
+from owned_shell_pass import (
+    LAYOUT_REPLACEMENTS,patch_arsc_owned_shell,patch_manifest_owned_shell,patch_owned_shell_layout,
+)
 from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_play_navigation,patch_build_navigation,patch_topnav_slider
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
@@ -139,7 +142,6 @@ def main():
         for path,radius in ROUND_RADII.items():
             if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
 
-        # Character-sheet cards: style the runtime templates, not only fragment shells.
         for path in sorted(SHEET_CARD_ROOTS):
             if path in names: resource_overrides[path]=patch_root_card(resource_overrides.get(path,z.read(path)),mini=False)
         for path in sorted(MINI_CARD_ROOTS):
@@ -154,9 +156,6 @@ def main():
         for path in ('res/drawable/rounded_rectangle_white_solid.xml','res/drawable/rounded_rectangle.xml'):
             if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),38)
 
-        # Milestone 9 text-fit pass. Rounded cards get more safe inset; long Russian
-        # headers grow to two lines instead of crossing the radius. Compact numeric
-        # cells are excluded by patch_existing_text_fit.
         for path in sorted(SHEET_CARD_ROOTS):
             if path in names: resource_overrides[path]=patch_root_padding(resource_overrides.get(path,z.read(path)),20)
         for path in sorted(MINI_CARD_ROOTS):
@@ -169,18 +168,25 @@ def main():
         for path in sorted(TEXT_LIST_LAYOUTS | LIST_ROWS | SHEET_CARD_ROOTS | MINI_CARD_ROOTS):
             if path in names: resource_overrides[path]=patch_existing_text_fit(resource_overrides.get(path,z.read(path)))
 
-        # Product-shell wording only. Rules/descriptions/databases are untouched.
         for path in ('res/layout/dialog_fragment_json.xml','res/layout/dialog_fragment_optin_books.xml'):
             if path in names: resource_overrides[path]=replace_product_shell_literals(resource_overrides.get(path,z.read(path)))
         for path in ('res/layout/dialog_fragment_firebase_connect.xml','res/layout/dialog_fragment_open_by_id.xml'):
             if path in names: resource_overrides[path]=replace_compatibility_shell_literals(resource_overrides.get(path,z.read(path)))
 
+        # 0.5 ownership layer: product menus and data-management UI use RuneSheet
+        # naming. The legacy web/backend remains explicitly a compatibility layer.
+        for path in sorted(LAYOUT_REPLACEMENTS):
+            if path in names:
+                resource_overrides[path]=patch_owned_shell_layout(path,resource_overrides.get(path,z.read(path)))
+
     manifest=patch_manifest(manifest,app_name=cfg['app_name'],application_id=cfg['application_id'],version_name=cfg['version_name'],version_code=cfg['version_code'],file_provider_authority=cfg['file_provider_authority'])
     manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
     manifest=harden_owned_runtime(manifest,application_id=cfg['application_id'])
+    manifest=patch_manifest_owned_shell(manifest)
 
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     arsc=patch_product_color_table(arsc)
+    arsc=patch_arsc_owned_shell(arsc)
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
     repl={old:new,f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',old+'.provider':cfg['file_provider_authority']}
     c2=patch_exact_strings(c2,repl)
