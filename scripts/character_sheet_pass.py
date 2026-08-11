@@ -54,7 +54,8 @@ def patch_root_card(blob: bytes, *, mini: bool = False) -> bytes:
     _, tag, attrs = _root(blob)
     amap = {name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
     rid = RID_MINI_CARD if mini else RID_SURFACE
-    padding = 0x0801 if mini else 0x0C01
+    # Larger insets keep long Russian labels clear of the large rounded corners.
+    padding = 0x0A01 if mini else 0x1001
     out = blob
     if 'background' in amap:
         b = bytearray(out); _set_typed(b, amap['background'][0], TYPE_REFERENCE, rid); out = bytes(b)
@@ -76,7 +77,7 @@ def patch_sheet_section_spacing(blob: bytes) -> bytes:
         bg = amap.get('background')
         if not bg or bg[2] != TYPE_REFERENCE or bg[3] != RID_SURFACE:
             continue
-        if 'padding' in amap: _set_typed(out, amap['padding'][0], TYPE_DIMENSION, 0x0C01)
+        if 'padding' in amap: _set_typed(out, amap['padding'][0], TYPE_DIMENSION, 0x1001)
         if 'layout_marginTop' in amap: _set_typed(out, amap['layout_marginTop'][0], TYPE_DIMENSION, 0x0801)
         if 'layout_marginBottom' in amap: _set_typed(out, amap['layout_marginBottom'][0], TYPE_DIMENSION, 0x0801)
     return bytes(out)
@@ -85,4 +86,4 @@ def patch_sheet_section_spacing(blob: bytes) -> bytes:
 def patch_header_pill(blob: bytes, target_id: int) -> bytes:
     out = _add_android_attr(blob,target_tag='TextView',target_id=target_id,name='background',attr_rid=ANDROID_BACKGROUND,dtype=TYPE_REFERENCE,data=RID_HEADER_PILL)
     out = _add_android_attr(out,target_tag='TextView',target_id=target_id,name='textColor',attr_rid=ANDROID_TEXT_COLOR,dtype=TYPE_REFERENCE,data=RID_STANDARD_TEXT)
-    return _add_android_attr(out,target_tag='TextView',target_id=target_id,name='padding',attr_rid=ANDROID_PADDING,dtype=TYPE_DIMENSION,data=0x0801)
+    return _add_android_attr(out,target_tag='TextView',target_id=target_id,name='padding',attr_rid=ANDROID_PADDING,dtype=TYPE_DIMENSION,data=0x0C01)
