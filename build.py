@@ -18,6 +18,19 @@ from milestone_components import (
     patch_subheader,
     recolor_icon,
 )
+from antique_theme import (
+    BADGE_FILL,
+    BRASS_DARK,
+    BRASS_LIGHT,
+    patch_button_antique,
+    patch_level_layout_antique,
+    patch_nav_header_antique,
+    patch_shape_antique,
+    patch_subheader_antique,
+    patch_topnav_antique,
+    recolor_icon_antique,
+    restyle_generated_brand_antique,
+)
 from reskin_patch import (
     FRONTPAGE_LAYOUTS,
     patch_frontpage_layout,
@@ -54,6 +67,9 @@ def main():
         import shutil; shutil.rmtree(brand)
     generate_brand_assets(brand)
     generate_action_assets(brand)
+    # Product identity now uses the warm antique-book palette. This only touches
+    # generated branding/action art, never rule/content images from the baseline.
+    restyle_generated_brand_antique(brand)
 
     with zipfile.ZipFile(args.base) as z:
         names=set(z.namelist())
@@ -74,9 +90,8 @@ def main():
         if 'res/layout/activity_main.xml' in names:
             resource_overrides['res/layout/activity_main.xml']=patch_activity_main(z.read('res/layout/activity_main.xml'))
 
-        # Milestone UI pass: only contained components where surface + every
-        # label are migrated together. This explicitly avoids the alpha.12
-        # invisible-label regression from background-only rewrites.
+        # Contained component pass: surface + every label are always migrated as
+        # one unit, preventing the old white-on-white invisible-label regression.
         for path in sorted(BUTTON_LAYOUTS):
             if path in names:
                 resource_overrides[path]=patch_button_layout(z.read(path))
@@ -88,6 +103,36 @@ def main():
             path='res/drawable/'+name
             if path in names:
                 resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
+
+        # Antique milestone overlay. Apply after the contained milestone pass so
+        # it changes palette, not component semantics.
+        for path in sorted(BUTTON_LAYOUTS):
+            if path in resource_overrides:
+                resource_overrides[path]=patch_button_antique(resource_overrides[path])
+        if 'res/layout/nav_header_main.xml' in resource_overrides:
+            resource_overrides['res/layout/nav_header_main.xml']=patch_nav_header_antique(resource_overrides['res/layout/nav_header_main.xml'])
+        if 'res/layout/text_view_subheader.xml' in resource_overrides:
+            resource_overrides['res/layout/text_view_subheader.xml']=patch_subheader_antique(resource_overrides['res/layout/text_view_subheader.xml'])
+        for path in ('res/layout/activity_content_play_mode.xml','res/layout/totalfragment_build_navigation.xml'):
+            if path in resource_overrides:
+                resource_overrides[path]=patch_topnav_antique(resource_overrides[path])
+        for name in sorted(ICON_NAMES):
+            path='res/drawable/'+name
+            if path in resource_overrides:
+                resource_overrides[path]=recolor_icon_antique(resource_overrides[path])
+
+        # Russian УРОВЕНЬ N cannot fit the inherited fixed 50/70dp cells. Use
+        # wrap_content + padding + explicit label color + a dedicated framed badge.
+        if 'res/layout/layout_level_navigation.xml' in resource_overrides:
+            resource_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation.xml'],play=False)
+        if 'res/layout/layout_level_navigation_play.xml' in resource_overrides:
+            resource_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation_play.xml'],play=True)
+        if 'res/drawable/background_topnav_slider.xml' in resource_overrides:
+            base_slider=z.read('res/drawable/background_topnav_slider.xml')
+            resource_overrides['res/drawable/background_topnav_slider.xml']=patch_shape_antique(base_slider,fill=BRASS_DARK,stroke=BRASS_LIGHT,radius_dp=10)
+            # test_level_drawable already has a stable resource id but was unused;
+            # reuse that id for the per-level framed badge without ARSC changes.
+            resource_overrides['res/drawable/test_level_drawable.xml']=patch_shape_antique(base_slider,fill=BADGE_FILL,stroke=BRASS_DARK,radius_dp=8)
 
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
     manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
