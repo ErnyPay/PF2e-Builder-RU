@@ -16,6 +16,10 @@ from antique_theme_gold import (
     patch_nav_header_antique,patch_product_color_table,patch_rounding,patch_shape_antique,
     patch_subheader_antique,patch_topnav_antique,recolor_icon_antique,restyle_generated_brand_antique,
 )
+from sheet_dialog_pass import (
+    DIALOGS,LIST_ROWS,ROUND_RADII,patch_dialog_menu_item,patch_drawdown,
+    patch_dynamic_level_header,patch_root_background,patch_selected_pill,patch_surface_shape,
+)
 from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_play_navigation,patch_build_navigation,patch_topnav_slider
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
@@ -89,27 +93,47 @@ def main():
             path='res/drawable/'+name
             if path in resource_overrides: resource_overrides[path]=recolor_icon_antique(resource_overrides[path])
 
-        # Level chips: remove inherited play style, force known-black resource, wrap content.
+        # Static and dynamic level labels: keep both black/readable and unconstrained.
         if 'res/layout/layout_level_navigation.xml' in resource_overrides:
             resource_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation.xml'],play=False)
         if 'res/layout/layout_level_navigation_play.xml' in resource_overrides:
             resource_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout_antique(resource_overrides['res/layout/layout_level_navigation_play.xml'],play=True)
+        if 'res/layout/layout_header.xml' in names:
+            resource_overrides['res/layout/layout_header.xml']=patch_dynamic_level_header(z.read('res/layout/layout_header.xml'))
         if 'res/drawable/background_topnav_slider.xml' in resource_overrides:
             base_slider=z.read('res/drawable/background_topnav_slider.xml')
             resource_overrides['res/drawable/background_topnav_slider.xml']=patch_shape_antique(base_slider,fill=SELECTED_DARK,stroke=BRASS_LIGHT,radius_dp=18)
             resource_overrides['res/drawable/test_level_drawable.xml']=patch_shape_antique(base_slider,fill=BADGE_FILL,stroke=BRASS_DARK,radius_dp=22)
 
-        # Remove exact legacy product-red literals from all compiled app XML.
+        # Remove exact legacy product-red literals from compiled app XML.
         for path in sorted(n for n in names if n.endswith('.xml')):
-            src=resource_overrides.get(path,z.read(path))
+            original=z.read(path); src=resource_overrides.get(path,original)
             patched=patch_direct_legacy_product_colors(src)
-            if patched!=z.read(path) or path in resource_overrides:
-                resource_overrides[path]=patched
+            if patched!=original or path in resource_overrides: resource_overrides[path]=patched
 
-        # Less-square UI: radius-only changes on app-specific drawable shapes.
+        # First app rounding pass, then milestone-6 stronger card/dialog system.
         for path,radius in APP_ROUND_DRAWABLES.items():
-            if path in names:
-                resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
+            if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
+
+        if 'res/drawable/rounded_rectangle_white_solid.xml' in names:
+            resource_overrides['res/drawable/rounded_rectangle_white_solid.xml']=patch_surface_shape(resource_overrides.get('res/drawable/rounded_rectangle_white_solid.xml',z.read('res/drawable/rounded_rectangle_white_solid.xml')))
+        if 'res/drawable/rounded_rectangle.xml' in names:
+            resource_overrides['res/drawable/rounded_rectangle.xml']=patch_surface_shape(resource_overrides.get('res/drawable/rounded_rectangle.xml',z.read('res/drawable/rounded_rectangle.xml')))
+        if 'res/drawable/background_drawdown.xml' in names:
+            resource_overrides['res/drawable/background_drawdown.xml']=patch_drawdown(resource_overrides.get('res/drawable/background_drawdown.xml',z.read('res/drawable/background_drawdown.xml')))
+        if 'res/drawable/custom_button_background.xml' in names:
+            button_shape=resource_overrides.get('res/drawable/custom_button_background.xml',z.read('res/drawable/custom_button_background.xml'))
+            resource_overrides['res/drawable/dialog_menu_selected.xml']=patch_selected_pill(button_shape,False)
+            resource_overrides['res/drawable/dialog_menu_selected_dark.xml']=patch_selected_pill(button_shape,True)
+        if 'res/layout/layout_dialog_menu_item.xml' in names:
+            resource_overrides['res/layout/layout_dialog_menu_item.xml']=patch_dialog_menu_item(resource_overrides.get('res/layout/layout_dialog_menu_item.xml',z.read('res/layout/layout_dialog_menu_item.xml')))
+
+        for path in sorted(DIALOGS):
+            if path in names: resource_overrides[path]=patch_root_background(resource_overrides.get(path,z.read(path)))
+        for path in sorted(LIST_ROWS):
+            if path in names: resource_overrides[path]=patch_root_background(resource_overrides.get(path,z.read(path)))
+        for path,radius in ROUND_RADII.items():
+            if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
 
     manifest=patch_manifest(manifest,app_name=cfg['app_name'],application_id=cfg['application_id'],version_name=cfg['version_name'],version_code=cfg['version_code'],file_provider_authority=cfg['file_provider_authority'])
     manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
