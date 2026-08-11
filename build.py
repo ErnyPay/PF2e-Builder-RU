@@ -8,6 +8,7 @@ from dex_patch import patch_exact_strings
 from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
+from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_product_palette
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
 
@@ -39,8 +40,16 @@ def main():
 
     with zipfile.ZipFile(args.base) as z:
         manifest=z.read('AndroidManifest.xml'); arsc=z.read('resources.arsc'); c2=z.read('classes2.dex')
+        layout_overrides={}
+        for path in FRONTPAGE_LAYOUTS:
+            if path in z.namelist(): layout_overrides[path]=patch_frontpage_layout(z.read(path))
+        if 'res/layout/layout_level_navigation.xml' in z.namelist():
+            layout_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation.xml'),play=False)
+        if 'res/layout/layout_level_navigation_play.xml' in z.namelist():
+            layout_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation_play.xml'),play=True)
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
+    arsc=patch_product_palette(arsc)
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
     repl={
         old:new,
@@ -49,6 +58,7 @@ def main():
     }
     c2=patch_exact_strings(c2,repl)
     overrides={'AndroidManifest.xml':manifest,'resources.arsc':arsc,'classes2.dex':c2}
+    overrides.update(layout_overrides)
     for p in brand.rglob('*'):
         if p.is_file(): overrides[str(p.relative_to(brand)).replace(os.sep,'/')]=p.read_bytes()
     unsigned=work/'unsigned.apk'; build_with_overrides(args.base,unsigned,overrides,strip_signatures=True,align=False)
