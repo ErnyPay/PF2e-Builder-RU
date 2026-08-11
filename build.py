@@ -24,6 +24,11 @@ from character_sheet_pass import (
     SHEET_CARD_ROOTS,MINI_CARD_ROOTS,HEADER_IDS,SHEET_FRAGMENTS,
     patch_root_card,patch_sheet_section_spacing,patch_header_pill,
 )
+from overflow_polish import (
+    TEXT_LIST_LAYOUTS,patch_root_padding,patch_header_text_fit,patch_existing_text_fit,
+    replace_product_shell_literals,replace_compatibility_shell_literals,
+)
+from ownership_runtime_pass import harden_owned_runtime
 from reskin_patch import FRONTPAGE_LAYOUTS,patch_frontpage_layout,patch_level_layout,patch_play_navigation,patch_build_navigation,patch_topnav_slider
 from apk_sign import build_with_overrides,sign_apk
 from verify_apk import verify
@@ -134,7 +139,7 @@ def main():
         for path,radius in ROUND_RADII.items():
             if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),radius)
 
-        # Milestone 7: style the runtime-inflated character-sheet templates themselves.
+        # Character-sheet cards: style the runtime templates, not only fragment shells.
         for path in sorted(SHEET_CARD_ROOTS):
             if path in names: resource_overrides[path]=patch_root_card(resource_overrides.get(path,z.read(path)),mini=False)
         for path in sorted(MINI_CARD_ROOTS):
@@ -146,12 +151,33 @@ def main():
             current=resource_overrides.get(path,z.read(path))
             for target_id in ids: current=patch_header_pill(current,target_id)
             resource_overrides[path]=current
-        # Large character cards are intentionally softer than generic dialog cards.
         for path in ('res/drawable/rounded_rectangle_white_solid.xml','res/drawable/rounded_rectangle.xml'):
             if path in names: resource_overrides[path]=patch_rounding(resource_overrides.get(path,z.read(path)),38)
 
+        # Milestone 9 text-fit pass. Rounded cards get more safe inset; long Russian
+        # headers grow to two lines instead of crossing the radius. Compact numeric
+        # cells are excluded by patch_existing_text_fit.
+        for path in sorted(SHEET_CARD_ROOTS):
+            if path in names: resource_overrides[path]=patch_root_padding(resource_overrides.get(path,z.read(path)),20)
+        for path in sorted(MINI_CARD_ROOTS):
+            if path in names: resource_overrides[path]=patch_root_padding(resource_overrides.get(path,z.read(path)),12)
+        for path,ids in HEADER_IDS.items():
+            if path not in names: continue
+            current=resource_overrides.get(path,z.read(path))
+            for target_id in ids: current=patch_header_text_fit(current,target_id)
+            resource_overrides[path]=current
+        for path in sorted(TEXT_LIST_LAYOUTS | LIST_ROWS | SHEET_CARD_ROOTS | MINI_CARD_ROOTS):
+            if path in names: resource_overrides[path]=patch_existing_text_fit(resource_overrides.get(path,z.read(path)))
+
+        # Product-shell wording only. Rules/descriptions/databases are untouched.
+        for path in ('res/layout/dialog_fragment_json.xml','res/layout/dialog_fragment_optin_books.xml'):
+            if path in names: resource_overrides[path]=replace_product_shell_literals(resource_overrides.get(path,z.read(path)))
+        for path in ('res/layout/dialog_fragment_firebase_connect.xml','res/layout/dialog_fragment_open_by_id.xml'):
+            if path in names: resource_overrides[path]=replace_compatibility_shell_literals(resource_overrides.get(path,z.read(path)))
+
     manifest=patch_manifest(manifest,app_name=cfg['app_name'],application_id=cfg['application_id'],version_name=cfg['version_name'],version_code=cfg['version_code'],file_provider_authority=cfg['file_provider_authority'])
     manifest=harden_manifest_privacy(manifest,application_id=cfg['application_id'])
+    manifest=harden_owned_runtime(manifest,application_id=cfg['application_id'])
 
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     arsc=patch_product_color_table(arsc)
