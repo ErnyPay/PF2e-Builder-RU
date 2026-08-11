@@ -8,6 +8,7 @@ from dex_patch import patch_exact_strings
 from arsc_patch import patch_utf8_pool_literal
 from brand_assets import generate_brand_assets
 from action_icons import generate_action_assets
+from product_components import PATCH_MODES, ICON_NAMES, patch_component_drawable, patch_activity_main, recolor_icon
 from reskin_patch import (
     FRONTPAGE_LAYOUTS,
     patch_frontpage_layout,
@@ -48,28 +49,40 @@ def main():
     with zipfile.ZipFile(args.base) as z:
         names=set(z.namelist())
         manifest=z.read('AndroidManifest.xml'); arsc=z.read('resources.arsc'); c2=z.read('classes2.dex')
-        layout_overrides={}
+        resource_overrides={}
         for path in FRONTPAGE_LAYOUTS:
-            if path in names: layout_overrides[path]=patch_frontpage_layout(z.read(path))
+            if path in names: resource_overrides[path]=patch_frontpage_layout(z.read(path))
         if 'res/layout/layout_level_navigation.xml' in names:
-            layout_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation.xml'),play=False)
+            resource_overrides['res/layout/layout_level_navigation.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation.xml'),play=False)
         if 'res/layout/layout_level_navigation_play.xml' in names:
-            layout_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation_play.xml'),play=True)
+            resource_overrides['res/layout/layout_level_navigation_play.xml']=patch_level_layout(z.read('res/layout/layout_level_navigation_play.xml'),play=True)
         if 'res/layout/activity_content_play_mode.xml' in names:
-            layout_overrides['res/layout/activity_content_play_mode.xml']=patch_play_navigation(z.read('res/layout/activity_content_play_mode.xml'))
+            resource_overrides['res/layout/activity_content_play_mode.xml']=patch_play_navigation(z.read('res/layout/activity_content_play_mode.xml'))
         if 'res/layout/totalfragment_build_navigation.xml' in names:
-            layout_overrides['res/layout/totalfragment_build_navigation.xml']=patch_build_navigation(z.read('res/layout/totalfragment_build_navigation.xml'))
+            resource_overrides['res/layout/totalfragment_build_navigation.xml']=patch_build_navigation(z.read('res/layout/totalfragment_build_navigation.xml'))
         if 'res/drawable/background_topnav_slider.xml' in names:
-            layout_overrides['res/drawable/background_topnav_slider.xml']=patch_topnav_slider(z.read('res/drawable/background_topnav_slider.xml'))
+            resource_overrides['res/drawable/background_topnav_slider.xml']=patch_topnav_slider(z.read('res/drawable/background_topnav_slider.xml'))
+        if 'res/layout/activity_main.xml' in names:
+            resource_overrides['res/layout/activity_main.xml']=patch_activity_main(z.read('res/layout/activity_main.xml'))
+        for path,mode in PATCH_MODES.items():
+            if path in names: resource_overrides[path]=patch_component_drawable(z.read(path),mode)
+        for name in ICON_NAMES:
+            path='res/drawable/'+name
+            if path in names: resource_overrides[path]=recolor_icon(z.read(path),'_dark' in name)
+
     manifest=patch_manifest(manifest, app_name=cfg['app_name'], application_id=cfg['application_id'], version_name=cfg['version_name'], version_code=cfg['version_code'], file_provider_authority=cfg['file_provider_authority'])
     # Product-name-only ARSC patch. Never globally rewrite theme colors: stateful
     # navigation resources are shared across unrelated inherited widgets.
     arsc=patch_utf8_pool_literal(arsc,'Pathbuilder2e RU',cfg['app_name'])
     old='com.redrazors.pathbuilder2e'; new=cfg['application_id']
-    repl={old:new,f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',old+'.provider':cfg['file_provider_authority']}
+    repl={
+        old:new,
+        f'/data/data/{old}/databases/':f'/data/data/{new}/databases/',
+        old+'.provider':cfg['file_provider_authority'],
+    }
     c2=patch_exact_strings(c2,repl)
     overrides={'AndroidManifest.xml':manifest,'resources.arsc':arsc,'classes2.dex':c2}
-    overrides.update(layout_overrides)
+    overrides.update(resource_overrides)
     for p in brand.rglob('*'):
         if p.is_file(): overrides[str(p.relative_to(brand)).replace(os.sep,'/')]=p.read_bytes()
     unsigned=work/'unsigned.apk'; build_with_overrides(args.base,unsigned,overrides,strip_signatures=True,align=False)
