@@ -2,6 +2,24 @@ from __future__ import annotations
 import hashlib, struct, zlib
 
 
+# User-visible shell/runtime literals that still live directly in classes2.dex.
+# These replacements are deliberately exact-size so string_data offsets and all
+# method/class references remain unchanged. Real compatibility backend URLs and
+# inherited class descriptors are intentionally NOT rewritten here.
+PRODUCT_SHELL_REPLACEMENTS = {
+    'https://gitlab.com/doctor.unspeakable/pathbuilder-2e/-/issues':
+        'https://github.com/ErnyPay/PF2e-Builder-RU/issues/new?x=12345',
+    '«Воспитанный верой» недоступен в Pathbuilder 2e':
+        '«Воспитанный верой» недоступен в RuneSheet RU  ',
+    'Нажмите «Назад», чтобы вернуться в Pathbuilder':
+        'Нажмите «Назад», чтобы вернуться в RuneSheet  ',
+    'Удалить старое изображение портрета из папки Pathbuilder2e? Внимание: оно будет удалено у всех персонажей, использующих этот портрет!':
+        'Удалить старое изображение портрета из папки RuneSheet RU ? Внимание: оно будет удалено у всех персонажей, использующих этот портрет!',
+    'Файл не распознан как база данных Pathbuilder 2e!':
+        'Файл не распознан как база данных RuneSheet RU  !',
+}
+
+
 def _uleb(d: bytes | bytearray, o: int):
     v = s = 0
     start = o
@@ -11,6 +29,7 @@ def _uleb(d: bytes | bytearray, o: int):
             return v, o, o-start
         s += 7
 
+
 def _enc_uleb(n: int) -> bytes:
     out = bytearray()
     while True:
@@ -19,8 +38,10 @@ def _enc_uleb(n: int) -> bytes:
         out.append(b)
         if not n: return bytes(out)
 
+
 def _item(s: str) -> bytes:
     return _enc_uleb(len(s.encode('utf-16le'))//2) + s.encode('utf-8') + b'\0'
+
 
 def strings_with_meta(d: bytes):
     u32 = lambda o: struct.unpack_from('<I', d, o)[0]
@@ -35,7 +56,12 @@ def strings_with_meta(d: bytes):
         out.append((i, off, e+1-off, s))
     return ss, so, out
 
+
 def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
+    # Every product build gets the safe shell cleanup in addition to the explicit
+    # package/data-path replacements supplied by build.py.
+    replacements = {**PRODUCT_SHELL_REPLACEMENTS, **replacements}
+
     d = bytearray(dex)
     ss, so, meta = strings_with_meta(dex)
     by_text = {s:(i,off,cap) for i,off,cap,s in meta}
