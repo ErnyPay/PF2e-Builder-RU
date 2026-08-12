@@ -1,9 +1,20 @@
 from __future__ import annotations
 from pathlib import Path
-import hashlib, os, shutil, struct, subprocess, zipfile
+import hashlib, json, os, shutil, struct, subprocess, zipfile
 from cryptography.hazmat.primitives.serialization import pkcs12, Encoding, PublicFormat
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes
+
+ROOT=Path(__file__).resolve().parents[1]
+
+def _release_config():
+    return json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
+
+def native_alignment()->int:
+    return int(_release_config().get('native_library_alignment',16384))
+
+def expected_signing_cert()->str:
+    return str(_release_config().get('expected_signing_cert_sha256','')).lower()
 
 
 def is_signature_entry(name:str)->bool:
@@ -28,7 +39,7 @@ def build_with_overrides(source:Path,dest:Path,overrides:dict[str,bytes],*,strip
             data=overrides.get(n, zin.read(src))
             extra=src.extra
             if align and src.compress_type==zipfile.ZIP_STORED:
-                alignment=4096 if n.endswith('.so') else 4
+                alignment=native_alignment() if n.endswith('.so') else 4
                 cur=zout.fp.tell(); base=cur+30+len(n.encode('utf-8'))+len(extra)
                 need=(-base)%alignment; add=need if need>=4 else need+alignment
                 extra=extra+struct.pack('<HH',0xFFFF,add-4)+b'\0'*(add-4)
@@ -43,7 +54,7 @@ def check_alignment(path:Path):
     with zipfile.ZipFile(path) as z, open(path,'rb') as f:
         for i in z.infolist():
             if i.compress_type!=zipfile.ZIP_STORED: continue
-            o=zip_data_offset(f,i); a=4096 if i.filename.endswith('.so') else 4
+            o=zip_data_offset(f,i); a=native_alignment() if i.filename.endswith('.so') else 4
             if o%a: bad.append((i.filename,o,a,o%a))
     return bad
 
@@ -93,6 +104,10 @@ def sign_apk(unsigned:Path, final:Path, keystore:Path, password:str, workdir:Pat
     vr=subprocess.run(['jarsigner','-verify',str(aligned)],capture_output=True,text=True)
     if vr.returncode!=0 or 'jar verified' not in vr.stdout.lower(): raise RuntimeError('v1 signature verify failed')
     cert=v2_sign(aligned,final,keystore,password.encode())
+    expected=expected_signing_cert()
+    if expected and cert.lower()!=expected:
+        final.unlink(missing_ok=True)
+        raise RuntimeError(f'wrong RuneSheet signing certificate: expected {expected}, got {cert.lower()}')
     vr=subprocess.run(['jarsigner','-verify',str(final)],capture_output=True,text=True)
     if vr.returncode!=0 or 'jar verified' not in vr.stdout.lower(): raise RuntimeError('final v1 verify failed')
     if check_alignment(final): raise RuntimeError('final alignment failure')
