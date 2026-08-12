@@ -3,6 +3,7 @@ import json,re
 
 from dex_patch import PRODUCT_SHELL_REPLACEMENTS, PROTECTED_GAMEPLAY_DEX_LITERALS, _item
 from storage_boundary import load_storage_boundary, _pairs
+from release_hardening import CONFIG_PROVIDER, DRAWER_HIDE_IDS, OPEN_BY_ID_ROW, OPEN_JSON_ROW, RELEASE_LAYOUT_PATHS
 
 ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
@@ -14,12 +15,12 @@ assert cfg['application_id']=='com.pf2ebuilder.ru.producty', 'RuneSheet update p
 assert cfg['file_provider_authority']=='com.runesheet.producty.file.provider', 'RuneSheet FileProvider authority is locked'
 assert len(cfg['application_id'].encode('ascii')) == len(old.encode('ascii'))
 assert len(cfg['file_provider_authority'].encode('ascii')) == len((old+'.provider').encode('ascii'))
-assert cfg.get('version_name')=='1.0.0-rc1'
-assert cfg.get('version_code')==1000
+assert cfg.get('version_name')=='1.0.0-rc2'
+assert cfg.get('version_code')==1001
 
 cert=cfg.get('expected_signing_cert_sha256','')
 assert re.fullmatch(r'[0-9a-f]{64}',cert)
-assert cert=='0b780e6e9b38b3c05ad0e0af780b77a13700cfdfb767af2724942db4cf0b29f7', 'RC1 certificate is permanently locked'
+assert cert=='0b780e6e9b38b3c05ad0e0af780b77a13700cfdfb767af2724942db4cf0b29f7', 'RuneSheet release certificate is permanently locked'
 assert cfg.get('release_key_promoted_from_preview') is True
 assert cfg.get('release_baseline')=='0.6.0-preview.5-dex-rollback'
 assert release_baseline['signing_cert_sha256']==cert
@@ -31,6 +32,7 @@ assert all(re.fullmatch(r'[0-9a-f]{64}',x) for x in release_baseline['dex_sha256
 assert cfg.get('fixed_theme')=='runesheet_antique'
 assert cfg.get('theme_switching_enabled') is False
 assert cfg.get('cloud_storage_enabled') is False
+assert cfg.get('legacy_external_actions_enabled') is False
 assert cfg.get('dex_product_shell_enabled') is False
 assert cfg.get('dex_fixed_theme_enabled') is False
 assert cfg.get('storage_owned_save_policy_enabled') is False, 'owned-save runtime is quarantined after device launch regression'
@@ -40,6 +42,17 @@ assert cfg.get('native_library_alignment')==16384
 for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
     assert len(_item(new_text))<=len(_item(old_text))
 assert not (set(PRODUCT_SHELL_REPLACEMENTS) & set(PROTECTED_GAMEPLAY_DEX_LITERALS))
+
+# RC2 release hardening is resource/manifest-only. Legacy external actions are
+# hidden instead of changing executable DEX immediately before release.
+assert CONFIG_PROVIDER == 'com.redrazors.pathbuilder2e.ConfigProvider'
+assert DRAWER_HIDE_IDS == {0x7F09034E, 0x7F09034F}
+assert OPEN_BY_ID_ROW == 0x7F0900D5
+assert OPEN_JSON_ROW == 0x7F0900AF
+assert 'res/menu/activity_main_drawer.xml' in RELEASE_LAYOUT_PATHS
+assert 'res/menu/activity_main_drawer_icons.xml' in RELEASE_LAYOUT_PATHS
+assert (ROOT/'scripts/release_hardening.py').exists()
+assert (ROOT/'build_runesheet.py').exists()
 
 assert storage_cfg['cloud_storage_enabled'] is False
 assert storage_cfg['cloud_storage_enabled'] == cfg['cloud_storage_enabled']
@@ -55,7 +68,6 @@ assert owned_save.get('enabled') is False
 assert owned_save.get('backend_replaced') is False
 assert owned_save.get('status') == 'quarantined-after-device-launch-regression'
 assert owned_save.get('runtime_types') == []
-assert (ROOT/'build_runesheet.py').exists()
 
 local_pairs=set()
 for section in ('save','load','folders','state'):
@@ -66,4 +78,4 @@ assert cloud_pairs
 assert not (local_pairs & cloud_pairs)
 assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs)
 
-print('RC1 identity, permanent signing key, no-cloud, launch-safe DEX, gameplay and quarantined-storage guards: OK')
+print('RC2 identity, permanent signing key, no-cloud, hidden legacy actions, launch-safe DEX and storage guards: OK')
