@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from manifest_patch import _find_manifest_pool, _iter_start_elements
-from owned_shell_pass import _collapse_id_rows, _replace_xml_strings
 from ownership_runtime_pass import _attr_value, _set_typed, TYPE_INT_BOOLEAN
-from sheet_dialog_pass import _add_android_attr
 
 CONFIG_PROVIDER = 'com.redrazors.pathbuilder2e.ConfigProvider'
 ANDROID_VISIBLE = 0x01010194
@@ -115,6 +113,11 @@ def harden_release_manifest(blob: bytes) -> bytes:
 
 
 def patch_release_layout(path: str, blob: bytes) -> bytes:
+    # Keep CI/selftest import-light: the visual helpers depend on Pillow and are
+    # loaded only during the actual APK resource transformation.
+    from owned_shell_pass import _collapse_id_rows, _replace_xml_strings
+    from sheet_dialog_pass import _add_android_attr
+
     out = _replace_xml_strings(blob, SAFE_UI_TRANSLATIONS)
 
     if path in ('res/menu/activity_main_drawer.xml', 'res/menu/activity_main_drawer_icons.xml'):
