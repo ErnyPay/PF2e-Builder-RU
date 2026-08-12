@@ -2,9 +2,11 @@ from pathlib import Path
 import json,re
 
 from dex_patch import PRODUCT_SHELL_REPLACEMENTS, PROTECTED_GAMEPLAY_DEX_LITERALS, _item
+from storage_boundary import load_storage_boundary, _pairs
 
 ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
+storage_cfg=load_storage_boundary()
 old='com.redrazors.pathbuilder2e'
 
 # The transition product has one stable Android identity. Do not create another
@@ -35,4 +37,25 @@ for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
 # Product ownership work must never rewrite gameplay/rules messages.
 assert not (set(PRODUCT_SHELL_REPLACEMENTS) & set(PROTECTED_GAMEPLAY_DEX_LITERALS)), 'gameplay literal leaked into product shell replacements'
 
-print('configuration, release-line, no-cloud, runtime-shell and gameplay guards: OK')
+# Local persistence now has an explicit RuneSheet-owned API. The transition APK
+# may still delegate to the pinned legacy seam, but cloud methods are a separate
+# isolated boundary and must never be part of the local migration adapter.
+assert storage_cfg['cloud_storage_enabled'] is False
+assert storage_cfg['cloud_storage_enabled'] == cfg['cloud_storage_enabled']
+assert storage_cfg['owned_contract'] == 'com.runesheet.storage.CharacterStorage'
+contract_file=ROOT/'native/storage-core/src/main/java/com/runesheet/storage/CharacterStorage.java'
+assert contract_file.exists(), 'RuneSheet storage-core contract missing'
+contract_text=contract_file.read_text(encoding='utf8')
+assert 'package com.runesheet.storage;' in contract_text
+assert 'interface CharacterStorage' in contract_text
+
+local_pairs=set()
+for section in ('save','load','folders','state'):
+    local_pairs |= _pairs(storage_cfg['legacy_transition'][section])
+cloud_pairs=_pairs(storage_cfg['isolated_cloud_runtime'])
+assert local_pairs, 'legacy local storage seam is empty'
+assert cloud_pairs, 'cloud isolation seam is empty'
+assert not (local_pairs & cloud_pairs), 'cloud/local storage seam overlap'
+assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs), 'cloud helper leaked into local seam'
+
+print('configuration, release-line, no-cloud, runtime-shell, gameplay and storage-boundary guards: OK')
