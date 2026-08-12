@@ -1,7 +1,7 @@
 from pathlib import Path
 import json,re
 
-from dex_patch import PRODUCT_SHELL_REPLACEMENTS, _item
+from dex_patch import PRODUCT_SHELL_REPLACEMENTS, PROTECTED_GAMEPLAY_DEX_LITERALS, _item
 
 ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
@@ -25,9 +25,13 @@ assert cfg.get('fixed_theme')=='runesheet_antique', 'RuneSheet uses one fixed pr
 assert cfg.get('theme_switching_enabled') is False, 'theme switching must stay disabled'
 assert cfg.get('native_library_alignment')==16384, 'stored native libraries must use 16K alignment'
 
-# Runtime shell strings are patched in-place inside classes2.dex. Their encoded
-# item size must never change, otherwise later string_data offsets would move.
+# Runtime shell strings stay inside their original string_data slots. Shorter
+# values are safe because dex_patch zero-fills the unused tail without moving
+# any offsets; longer values are forbidden.
 for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
-    assert len(_item(old_text))==len(_item(new_text)), f'unsafe DEX shell replacement size: {old_text!r}'
+    assert len(_item(new_text))<=len(_item(old_text)), f'DEX shell replacement exceeds slot: {old_text!r}'
 
-print('configuration, release-line and runtime-shell invariants: OK')
+# Product ownership work must never rewrite gameplay/rules messages.
+assert not (set(PRODUCT_SHELL_REPLACEMENTS) & set(PROTECTED_GAMEPLAY_DEX_LITERALS)), 'gameplay literal leaked into product shell replacements'
+
+print('configuration, release-line, runtime-shell and gameplay guards: OK')
