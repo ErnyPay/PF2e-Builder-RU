@@ -19,6 +19,11 @@ PRODUCT_SHELL_REPLACEMENTS = {
         'Файл не распознан как база данных RuneSheet RU  !',
 }
 
+FIXED_THEME_TARGET_METHODS = {
+    ('Lcom/redrazors/pathbuilder2e/MainActivity;', 'onCreate'),
+    ('Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogTheme;', 'setTheme'),
+}
+
 
 def _uleb(d: bytes | bytearray, o: int):
     v = s = 0
@@ -57,6 +62,87 @@ def strings_with_meta(d: bytes):
     return ss, so, out
 
 
+def _force_fixed_theme_refs(d: bytearray, strings: list[str]) -> None:
+    """Map all inherited Classic/Dark style choices to the RuneSheet AppTheme.
+
+    This preserves SharedPreferences and old dialog IDs for binary compatibility,
+    but a previously saved Classic/Dark preference can no longer change the
+    visual theme. Only the two pinned theme-selection methods are modified.
+    """
+    u32=lambda o:struct.unpack_from('<I',d,o)[0]
+    type_size,type_off=u32(0x40),u32(0x44)
+    type_ids=[u32(type_off+4*i) for i in range(type_size)]
+
+    field_size,field_off=u32(0x50),u32(0x54)
+    style_fields={}
+    for i in range(field_size):
+        class_idx,_,name_idx=struct.unpack_from('<HHI',d,field_off+8*i)
+        if strings[type_ids[class_idx]] != 'Lcom/redrazors/pathbuilder2e/R$style;':
+            continue
+        name=strings[name_idx]
+        if name in ('AppTheme','AppThemeDark','AppThemePlain'):
+            style_fields[name]=i
+    if set(style_fields) != {'AppTheme','AppThemeDark','AppThemePlain'}:
+        raise ValueError(f'expected style fields missing: {style_fields}')
+
+    method_size,method_off=u32(0x58),u32(0x5c)
+    methods=[]
+    for i in range(method_size):
+        class_idx,_,name_idx=struct.unpack_from('<HHI',d,method_off+8*i)
+        methods.append((strings[type_ids[class_idx]],strings[name_idx]))
+
+    class_size,class_off=u32(0x60),u32(0x64)
+    code_by_method={}
+    for c in range(class_size):
+        off=class_off+32*c
+        class_data_off=u32(off+24)
+        if not class_data_off:
+            continue
+        p=class_data_off
+        static_fields,p,_=_uleb(d,p); instance_fields,p,_=_uleb(d,p)
+        direct_methods,p,_=_uleb(d,p); virtual_methods,p,_=_uleb(d,p)
+        for count in (static_fields,instance_fields):
+            idx=0
+            for _ in range(count):
+                diff,p,_=_uleb(d,p); _,p,_=_uleb(d,p); idx += diff
+        for count in (direct_methods,virtual_methods):
+            idx=0
+            for _ in range(count):
+                diff,p,_=_uleb(d,p); _,p,_=_uleb(d,p); code_off,p,_=_uleb(d,p); idx += diff
+                if code_off:
+                    code_by_method[idx]=code_off
+
+    wanted={i for i,m in enumerate(methods) if m in FIXED_THEME_TARGET_METHODS}
+    if len(wanted) != len(FIXED_THEME_TARGET_METHODS):
+        raise ValueError(f'fixed-theme target methods missing: {wanted}')
+
+    old_fields={style_fields['AppThemeDark'],style_fields['AppThemePlain']}
+    new_field=style_fields['AppTheme']
+    patched=0
+    per_method={}
+    for method_idx in wanted:
+        code_off=code_by_method.get(method_idx)
+        if not code_off:
+            raise ValueError(f'fixed-theme method has no code: {methods[method_idx]}')
+        insns_size=u32(code_off+12)
+        base=code_off+16
+        hits=0
+        # sget is format 21c: first code unit opcode/register, second unit field@BBBB.
+        for unit in range(insns_size-1):
+            first=struct.unpack_from('<H',d,base+2*unit)[0]
+            if (first & 0xff) != 0x60:
+                continue
+            field_idx=struct.unpack_from('<H',d,base+2*(unit+1))[0]
+            if field_idx in old_fields:
+                struct.pack_into('<H',d,base+2*(unit+1),new_field)
+                patched += 1; hits += 1
+        per_method[methods[method_idx]]=hits
+
+    # Pinned 2.56 baseline: MainActivity has two refs and DialogTheme has two.
+    if patched != 4 or any(v != 2 for v in per_method.values()):
+        raise ValueError(f'unexpected fixed-theme patch count: total={patched}, per_method={per_method}')
+
+
 def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
     # Every product build gets the safe shell cleanup in addition to the explicit
     # package/data-path replacements supplied by build.py.
@@ -75,6 +161,9 @@ def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
         if len(new_item) != cap:
             raise ValueError(f'replacement must preserve exact DEX item size: {old!r} ({cap}) -> {new!r} ({len(new_item)})')
         d[off:off+cap] = new_item
+
+    strings=[s for _,_,_,s in strings_with_meta(bytes(d))[2]]
+    _force_fixed_theme_refs(d,strings)
 
     # Re-parse raw MUTF-8 and ensure string_ids remain strictly sorted as required by ART.
     def mutf8_units(raw: bytes):
