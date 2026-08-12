@@ -9,6 +9,12 @@ TYPE_REFERENCE = 0x01
 TYPE_DIMENSION = 0x05
 NO_INDEX = 0xFFFFFFFF
 THEME_OPTION_ID = 0x7F090119
+THEME_DIALOG_COLLAPSE_IDS = {
+    0x7F09011C, # parchment row
+    0x7F09011A, # classic row
+    0x7F09011B, # dark row
+    0x7F0900FC, # select-theme action
+}
 OLD_AD_APP_ID = 'ca-app-pub-8849615353397054~3022553003'
 OLD_BANNER_ID = 'ca-app-pub-8849615353397054/1681551174'
 TEST_AD_APP_ID = 'ca-app-pub-3940256099942544~3347511713'
@@ -64,6 +70,12 @@ LAYOUT_REPLACEMENTS = {
         'GM-режим пока использует унаследованный веб-сервис Pathbuilder (режим совместимости).': 'GM-режим пока использует унаследованный веб-сервис (режим совместимости).',
     },
     'res/layout/dialog_fragment_json.xml': {'Export JSON': 'Экспорт JSON', 'View JSON file': 'Открыть JSON'},
+    'res/layout/dialog_fragment_theme.xml': {
+        'Set App Theme': 'Стиль RuneSheet',
+        'App Theme can be set at any time via the App Options button on the front page. Classic or Dark may give a better experience on low end devices.': 'В RuneSheet используется единый фиксированный стиль приложения.',
+        'Select Theme': '',
+        'Parchment': '', 'Classic': '', 'Dark': '',
+    },
 }
 
 
@@ -87,31 +99,32 @@ def _set_typed(out: bytearray, attr: int, dtype: int, data: int) -> None:
     struct.pack_into('<HBBI', out, attr + 12, 8, 0, dtype, data)
 
 
-def _hide_theme_option(blob: bytes) -> bytes:
-    """Keep the inherited view ID for runtime safety, but collapse it out of the UI.
-
-    The old dialog code still looks the theme row up by ID and may attach a click
-    listener. Physically removing the node risks a NullPointerException. A 0dp row
-    keeps the runtime contract while making theme selection unavailable to users.
-    """
+def _collapse_id_rows(blob: bytes, target_ids: set[int]) -> bytes:
     pool = _find_manifest_pool(blob)
     out = bytearray(blob)
-    found = False
-    for _, tag, attrs in _iter_start_elements(bytes(out), pool.strings):
-        if tag != 'LinearLayout':
-            continue
+    found=set()
+    for _, _, attrs in _iter_start_elements(bytes(out), pool.strings):
         amap = {name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
         ident = amap.get('id')
-        if not ident or ident[2] != TYPE_REFERENCE or ident[3] != THEME_OPTION_ID:
+        if not ident or ident[2] != TYPE_REFERENCE or ident[3] not in target_ids:
             continue
-        for name in ('layout_height', 'padding', 'layout_marginTop'):
+        for name in ('layout_height', 'padding', 'layout_marginTop', 'layout_marginBottom'):
             if name in amap:
                 _set_typed(out, amap[name][0], TYPE_DIMENSION, 0x00000001)  # 0dp
-        found = True
-        break
-    if not found:
-        raise ValueError('theme option row not found')
+        found.add(ident[3])
+    missing=target_ids-found
+    if missing:
+        raise ValueError(f'collapsible rows not found: {[hex(x) for x in sorted(missing)]}')
     return bytes(out)
+
+
+def _hide_theme_option(blob: bytes) -> bytes:
+    """Keep inherited IDs for runtime safety while removing all theme choices.
+
+    Old dialog code still looks these views up and can attach listeners. Physical
+    removal risks NullPointerException; 0dp rows preserve the runtime contract.
+    """
+    return _collapse_id_rows(blob,{THEME_OPTION_ID})
 
 
 def patch_arsc_owned_shell(blob: bytes) -> bytes:
@@ -171,4 +184,6 @@ def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
     out = _replace_xml_strings(blob, replacements) if replacements else blob
     if path == 'res/layout/dialog_fragment_frontpage_more.xml':
         out = _hide_theme_option(out)
+    elif path == 'res/layout/dialog_fragment_theme.xml':
+        out = _collapse_id_rows(out,THEME_DIALOG_COLLAPSE_IDS)
     return out
