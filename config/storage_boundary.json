@@ -1,6 +1,19 @@
 {
   "owned_contract": "com.runesheet.storage.CharacterStorage",
   "cloud_storage_enabled": false,
+  "owned_transition": {
+    "save_policy": {
+      "enabled": true,
+      "backend_replaced": false,
+      "policy": "local-only",
+      "runtime_types": [
+        "Lcom/redrazors/pathbuilder2e/filemanagement/CoreRuneSheet;",
+        "Lcom/redrazors/pathbuilder2e/filemanagement/RuneSheetState;",
+        "Lcom/redrazors/pathbuilder2e/filemanagement/runesheet/CharacterStore;",
+        "Lcom/redrazors/pathbuilder2e/filemanagement/runesheet/FolderStore;"
+      ]
+    }
+  },
   "legacy_transition": {
     "save": {
       "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogNewSave;": [
