@@ -8,6 +8,18 @@ We keep its working PF2e mechanics, calculations, rules dictionaries, Russian tr
 
 A feature is never removed just because we plan to replace its implementation later. Internal replacements are allowed only as verified 1:1 replacements.
 
+### Release-line rule
+
+RuneSheet has one transition-product update line:
+
+- package: `com.pf2ebuilder.ru.producty`;
+- signing certificate SHA-256: `e8e86e8c2beb58db4ca242a65ac9b970f0c9f736321ed1057814d64f7dfa7c90`;
+- one fixed `runesheet_antique` product theme; user theme switching is disabled;
+- new side-by-side packages are not a workaround for signing, manifest or installability problems;
+- stored native libraries are release-gated at 16K ZIP alignment before v2 signing.
+
+If the accepted private signing key is unavailable, no replacement APK is published until that update-line problem is resolved. The build must fail instead of silently creating a differently signed app.
+
 ## 0.1 — Baseline protection and reproducibility
 
 - [x] deterministic polished base-APK fingerprint check;
@@ -15,8 +27,10 @@ A feature is never removed just because we plan to replace its implementation la
 - [x] protected `assets/remaster.db` SHA-256 baseline;
 - [x] verify protected database hashes in produced transition APKs;
 - [x] v1/v2 signing and DEX verification tooling;
+- [x] lock the accepted Android package and signing-certificate fingerprint in build guards;
+- [x] verify 16K alignment of stored native libraries;
 - [ ] device smoke test of the next protected-content transition build;
-- [ ] freeze and securely back up the release signing key.
+- [ ] recover/securely back up the accepted RuneSheet update signing key before the next distributed APK.
 
 Protected content hashes:
 
@@ -26,10 +40,11 @@ Protected content hashes:
 ## 0.2 — Make the existing app ours: identity and shell
 
 - [x] independent app name;
-- [x] independent application ID/local data directory;
+- [x] stable RuneSheet application ID/local data directory;
 - [x] independent provider authorities;
 - [x] original launcher icon/logo generation;
 - [x] project-owned faceted action glyph generation;
+- [x] remove user-facing app-theme selection and keep one RuneSheet antique theme;
 - [ ] finish app name/About/splash/branding consistency across all screens;
 - [ ] remove remaining original-brand UI strings where they are not rules/content;
 - [ ] verify character creation, character sheet and existing content behave exactly like the polished baseline.
@@ -37,7 +52,8 @@ Protected content hashes:
 ## 0.3 — Detach inherited services without touching gameplay
 
 - [x] inventory Google/Firebase/ads/billing dependencies;
-- [ ] isolate ads/billing/analytics paths one dependency at a time;
+- [x] disable inherited Ads/Measurement automatic Android components where safe;
+- [ ] isolate billing/cloud compatibility paths one dependency at a time;
 - [ ] stop claiming original application/store/deep-link identity where safe;
 - [ ] preserve all offline character-builder mechanics during service removal;
 - [ ] verify export/import/share flows after each service change;
@@ -46,7 +62,9 @@ Protected content hashes:
 ## 0.4 — Own the UX incrementally
 
 - [ ] document current polished screens and navigation as regression reference;
-- [ ] introduce project theme/components without changing rules text or calculations;
+- [x] introduce the RuneSheet antique component system without changing rules text or calculations;
+- [x] migrate major dialogs, list rows and character-sheet runtime templates to project-owned rounded surfaces;
+- [ ] finish long-text geometry and information hierarchy across remaining screens;
 - [ ] replace visual elements screen-by-screen, not with a blank new builder;
 - [ ] keep information density and existing user workflows unless a deliberate UX task says otherwise;
 - [ ] device regression check after every substantial screen change.
