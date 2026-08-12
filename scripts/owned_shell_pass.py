@@ -11,9 +11,11 @@ TYPE_DIMENSION = 0x05
 TYPE_INT_BOOLEAN = 0x12
 TYPE_INT_DEC = 0x10
 NO_INDEX = 0xFFFFFFFF
+
 ABOUT_SLOT_ID = 0x7F090119  # inherited theme row, reused as safe RuneSheet About entry
 NAV_PATRON_ID = 0x7F090349
 ANDROID_VISIBLE = 0x01010194
+
 LEGACY_PROMO_IDS = {
     0x7F090114, # Starbuilder cross-promo
     0x7F0900D6, # Pathbuilder 1e cross-promo
@@ -24,6 +26,18 @@ THEME_DIALOG_COLLAPSE_IDS = {
     0x7F09011B, # dark row
     0x7F0900FC, # select-theme action
 }
+
+# Cloud storage is intentionally absent from the RuneSheet product for now.
+# Keep inherited IDs/classes for runtime safety, but remove every static entry
+# point from the user interface. Re-enable only through an explicit product task.
+CLOUD_SAVE_BUTTON_ID = 0x7F0900FA
+CLOUD_WARNING_ID = 0x7F0904D8
+CLOUD_COLLAPSE_IDS_BY_LAYOUT = {
+    'res/layout/dialog_fragment_new_save.xml': {CLOUD_SAVE_BUTTON_ID, CLOUD_WARNING_ID},
+    'res/layout/dialog_fragment_save.xml': {CLOUD_WARNING_ID},
+    'res/layout/dialog_fragment_move_folder.xml': {CLOUD_WARNING_ID},
+}
+
 DRAWER_MENUS = {
     'res/menu/activity_main_drawer.xml',
     'res/menu/activity_main_drawer_icons.xml',
@@ -68,7 +82,7 @@ ARSC_REPLACEMENTS = {
     'Pathbuilder2e хочет создать SQL-базу персонажей во внешнем хранилище. Если не дать разрешение, база будет создана во внутреннем хранилище приложения и удалится при удалении приложения.':
         'RuneSheet RU может создать SQL-базу персонажей во внешнем хранилище. Без разрешения база останется во внутреннем хранилище и удалится вместе с приложением.',
     'Обновитесь до полной версии Pathbuilder 2e для Android, чтобы убрать рекламу. Также станут доступны животные-компаньоны, фамильяры, облачное хранилище и дополнительные настройки, включая выбор способностей, навыков, доспехов, оружия и снаряжения.\n\nВерсии для Android и Web являются отдельными продуктами и приобретаются отдельно.':
-        'Полный доступ открывает дополнительные функции персонажа и облачное хранение. Лицензия и часть сетевых функций пока работают через унаследованный слой совместимости.\n\nРекламные компоненты в RuneSheet RU отключены.',
+        'Полный доступ открывает дополнительные функции персонажа. Лицензия пока работает через унаследованный слой совместимости.\n\nРекламные компоненты в RuneSheet RU отключены.',
     'If you have just reinstalled the app, have previously bought the full unlock and the app is not unlocking, there may be an error with the Play Store on your device. Try the following to fix:\n\n 1) If you have multiple accounts on your device, make sure you definitely logged into your device and playstore with the account that you bought the app on. \n\n2) Uninstall the app (export the database if you have local files first). \n\n3) Go to settings -> Apps -> Google Play Store -> Storage and Cache -> Clear Storage and Clear Cache. \n\n4) Reboot the device \n\n5) Reinstall the app. (import the database if you had local files). The play store cache can sometimes take up to 24 hours to populate on a new device, so please give it some time to resolve.\n\n\nIf you continue to have issues please use Report Bug and open a new issue.':
         'Полный доступ пока проверяется через унаследованный Google Play Billing. Если ранее приобретённый доступ не восстановился, убедитесь, что на устройстве выбран тот же Google-аккаунт. Перед переустановкой обязательно экспортируйте локальную базу персонажей. После очистки кэша Google Play и перезагрузки восстановление покупки может занять некоторое время. Если проблема сохраняется, используйте «Отправить отчёт».',
     OLD_AD_APP_ID: TEST_AD_APP_ID,
@@ -133,23 +147,22 @@ LAYOUT_REPLACEMENTS = {
     'res/layout/dialog_fragment_theme.xml': {
         'Set App Theme': 'RuneSheet RU',
         'App Theme can be set at any time via the App Options button on the front page. Classic or Dark may give a better experience on low end devices.': 'RuneSheet RU — лист и конструктор персонажа PF2e. В приложении используется единый фиксированный стиль; сетевые функции совместимости отмечены отдельно.',
-        'Select Theme': '',
-        'Parchment': '', 'Classic': '', 'Dark': '',
+        'Select Theme': '', 'Parchment': '', 'Classic': '', 'Dark': '',
     },
     'res/layout/dialog_fragment_new_save.xml': {
         'First Save': 'Первое сохранение',
         'Local Folder': 'Локальная папка',
-        'Save to GDrive': 'Облако (совместимость)',
+        'Save to GDrive': '',
         'Save to Local Folder': 'Сохранить локально',
-        'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
+        'Warning: cloud storage will use mobile data allowances where wifi is not available.': '',
     },
     'res/layout/dialog_fragment_save.xml': {
         'Make a new copy': 'Создать копию',
-        'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
+        'Warning: cloud storage will use mobile data allowances where wifi is not available.': '',
     },
     'res/layout/dialog_fragment_move_folder.xml': {
         'Copy Character': 'Копировать персонажа',
-        'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
+        'Warning: cloud storage will use mobile data allowances where wifi is not available.': '',
     },
     'res/layout/dialog_fragment_load_new.xml': {},
     'res/layout/dialog_fragment_liences.xml': {},
@@ -240,18 +253,11 @@ def _relax_service_text(blob: bytes) -> bytes:
 
 
 def _hide_frontpage_legacy_rows(blob: bytes) -> bytes:
-    """Keep inherited promo view IDs/listener wiring but remove obsolete products.
-
-    The former theme row is intentionally NOT hidden anymore: it is reused as
-    an in-app `О RuneSheet` entry. DialogTheme still exists for binary safety,
-    but all theme-choice rows inside it remain collapsed.
-    """
+    """Keep inherited promo view IDs/listener wiring but remove obsolete products."""
     return _collapse_id_rows(blob,LEGACY_PROMO_IDS)
 
 
 def _hide_creator_menu_item(blob: bytes) -> bytes:
-    # Keep nav_patron ID so NavigationControl remains binary-compatible, but the
-    # old creator/Patreon item is not part of the RuneSheet product navigation.
     return _add_android_attr(
         blob,target_tag='item',target_id=NAV_PATRON_ID,name='visible',
         attr_rid=ANDROID_VISIBLE,dtype=TYPE_INT_BOOLEAN,data=0,
@@ -322,4 +328,6 @@ def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
         out = _collapse_id_rows(out,THEME_DIALOG_COLLAPSE_IDS)
     elif path in DRAWER_MENUS:
         out = _hide_creator_menu_item(out)
+    if path in CLOUD_COLLAPSE_IDS_BY_LAYOUT:
+        out = _collapse_id_rows(out,CLOUD_COLLAPSE_IDS_BY_LAYOUT[path])
     return out
