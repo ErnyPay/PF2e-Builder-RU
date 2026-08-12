@@ -3,7 +3,7 @@ import json,re
 
 from dex_patch import PRODUCT_SHELL_REPLACEMENTS, PROTECTED_GAMEPLAY_DEX_LITERALS, _item
 from storage_boundary import load_storage_boundary, _pairs
-from storage_save_pass import OWNED_TYPE_RENAMES
+from storage_save_runtime import OWNED_TYPE_RENAMES
 
 ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
@@ -60,7 +60,7 @@ assert owned_save.get('enabled') is True
 assert owned_save.get('backend_replaced') is False
 assert owned_save.get('policy') == 'local-only'
 assert set(owned_save.get('runtime_types',[])) <= set(OWNED_TYPE_RENAMES.values())
-assert (ROOT/'scripts/storage_save_pass.py').exists(), 'owned save pass missing'
+assert (ROOT/'scripts/storage_save_runtime.py').exists(), 'hardened owned save pass missing'
 assert (ROOT/'build_runesheet.py').exists(), 'primary RuneSheet build entrypoint missing'
 
 local_pairs=set()
