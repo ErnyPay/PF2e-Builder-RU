@@ -1,8 +1,8 @@
 {
   "app_name": "RuneSheet RU",
   "application_id": "com.pf2ebuilder.ru.producty",
-  "version_name": "1.0.0-rc2",
-  "version_code": 1001,
+  "version_name": "1.0.0",
+  "version_code": 1002,
   "file_provider_authority": "com.runesheet.producty.file.provider",
   "expected_signing_cert_sha256": "0b780e6e9b38b3c05ad0e0af780b77a13700cfdfb767af2724942db4cf0b29f7",
   "release_key_promoted_from_preview": true,
