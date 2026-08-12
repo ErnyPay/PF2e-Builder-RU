@@ -1,6 +1,8 @@
 from __future__ import annotations
 import hashlib, struct, zlib
 
+from storage_boundary import verify_storage_boundary
+
 
 # User-visible shell/runtime literals that still live directly in classes2.dex.
 # Replacements stay inside the existing string_data slot, so string offsets and
@@ -159,6 +161,10 @@ def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
     The historical function name is kept because build.py already imports it.
     New values may be shorter than their original slots; unused bytes are zeroed.
     """
+    # Every transition build must first prove that the inherited local-storage
+    # seam is still the pinned one and that cloud methods remain isolated.
+    verify_storage_boundary(dex)
+
     replacements = {**PRODUCT_SHELL_REPLACEMENTS, **replacements}
 
     d = bytearray(dex)
