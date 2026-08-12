@@ -1,7 +1,18 @@
 from __future__ import annotations
 from pathlib import Path
-import hashlib,struct,subprocess,zipfile
+import hashlib,json,struct,subprocess,zipfile
 
+from manifest_patch import _find_manifest_pool,_iter_start_elements,NO_INDEX,TYPE_STRING,TYPE_INT_DEC
+from apk_sign import zip_data_offset
+
+ROOT=Path(__file__).resolve().parents[1]
+OLD_AD_IDS=(
+    b'ca-app-pub-8849615353397054~3022553003',
+    b'ca-app-pub-8849615353397054/1681551174',
+)
+THEME_OPTION_ID=0x7F090119
+TYPE_REFERENCE=0x01
+TYPE_DIMENSION=0x05
 
 # Polished round5 content is a product baseline, not a migration source.
 # Branding/code changes must not mutate these assets unless a dedicated
@@ -10,6 +21,58 @@ PROTECTED_ASSET_SHA256={
     'assets/master.db':'06f09830b2e578dd1ab01730537ec76b9b05e37a68902fe744a9f6c37b889b81',
     'assets/remaster.db':'8485608ddf46b3b5437bd8b051b2d47fa6118b0bfaa5187a59bdd3f831289f1d',
 }
+
+
+def _config():
+    p=ROOT/'config/brand.json'
+    return json.loads(p.read_text(encoding='utf8')) if p.exists() else {}
+
+def _xml_attr_value(strings,raw,dtype,data):
+    if dtype==TYPE_STRING and data!=NO_INDEX and data<len(strings): return strings[data]
+    if raw!=NO_INDEX and raw<len(strings): return strings[raw]
+    return data
+
+def inspect_manifest(blob:bytes):
+    p=_find_manifest_pool(blob); strings=p.strings
+    out={'package':None,'version_name':None,'version_code':None,'application_label':None,'provider_authorities':[]}
+    for _,tag,attrs in _iter_start_elements(blob,strings):
+        amap={name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
+        if tag=='manifest':
+            if 'package' in amap: out['package']=_xml_attr_value(strings,*amap['package'][1:])
+            if 'versionName' in amap: out['version_name']=_xml_attr_value(strings,*amap['versionName'][1:])
+            if 'versionCode' in amap:
+                _,raw,dtype,data=amap['versionCode']; out['version_code']=data if dtype==TYPE_INT_DEC else _xml_attr_value(strings,raw,dtype,data)
+        elif tag=='application' and 'label' in amap:
+            out['application_label']=_xml_attr_value(strings,*amap['label'][1:])
+        elif tag=='provider' and 'authorities' in amap:
+            out['provider_authorities'].append(_xml_attr_value(strings,*amap['authorities'][1:]))
+    return out
+
+def verify_fixed_theme(blob:bytes):
+    p=_find_manifest_pool(blob); strings=p.strings
+    hidden=False
+    for _,tag,attrs in _iter_start_elements(blob,strings):
+        if tag!='LinearLayout': continue
+        amap={name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
+        ident=amap.get('id')
+        if not ident or ident[2]!=TYPE_REFERENCE or ident[3]!=THEME_OPTION_ID: continue
+        h=amap.get('layout_height')
+        hidden=bool(h and h[2]==TYPE_DIMENSION and (h[3]>>8)==0)
+        break
+    if not hidden: raise RuntimeError('theme selector is not collapsed')
+    if 'Set App Theme' in strings or 'Оформление' in strings: raise RuntimeError('theme selector wording is still user-visible')
+    return {'ok':True,'theme_option_id':hex(THEME_OPTION_ID),'collapsed':True}
+
+def verify_alignment(apk:Path,alignment:int):
+    checked=[]; bad=[]
+    with zipfile.ZipFile(apk) as z,open(apk,'rb') as f:
+        for info in z.infolist():
+            if info.compress_type!=zipfile.ZIP_STORED or not info.filename.endswith('.so'): continue
+            off=zip_data_offset(f,info); row={'name':info.filename,'offset':off,'alignment':alignment,'remainder':off%alignment}
+            checked.append(row)
+            if off%alignment: bad.append(row)
+    if bad: raise RuntimeError(f'native library alignment failed: {bad[:3]}')
+    return {'ok':True,'alignment':alignment,'libraries':checked}
 
 
 def dex_units(d:bytes):
@@ -59,17 +122,41 @@ def _verify_protected_assets(z:zipfile.ZipFile, expected):
 
 
 def verify(apk:Path, expected_package_strings=None, protected_assets=PROTECTED_ASSET_SHA256):
-    out={'apk':str(apk),'sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'dex':{}}
+    cfg=_config(); out={'apk':str(apk),'sha256':hashlib.sha256(apk.read_bytes()).hexdigest(),'dex':{}}
     with zipfile.ZipFile(apk) as z:
         bad=z.testzip(); out['zip_ok']=bad is None
         if protected_assets:
             out['protected_assets']=_verify_protected_assets(z,protected_assets)
+        manifest=z.read('AndroidManifest.xml'); out['manifest']=inspect_manifest(manifest)
+        if cfg:
+            checks=(
+                ('package',cfg.get('application_id')),
+                ('version_name',cfg.get('version_name')),
+                ('version_code',cfg.get('version_code')),
+                ('application_label',cfg.get('app_name')),
+            )
+            for key,want in checks:
+                if want is not None and out['manifest'].get(key)!=want:
+                    raise RuntimeError(f'manifest {key} mismatch: expected {want!r}, got {out["manifest"].get(key)!r}')
+            old_auth=[a for a in out['manifest']['provider_authorities'] if isinstance(a,str) and a.startswith('com.redrazors.pathbuilder2e')]
+            if old_auth: raise RuntimeError(f'old provider authorities remain: {old_auth}')
+            if cfg.get('theme_switching_enabled') is False:
+                out['fixed_theme']=verify_fixed_theme(z.read('res/layout/dialog_fragment_frontpage_more.xml'))
+        scan=manifest+z.read('resources.arsc')
+        leaked=[x.decode() for x in OLD_AD_IDS if x in scan]
+        if leaked: raise RuntimeError(f'production AdMob IDs remain: {leaked}')
+        out['production_ad_ids_absent']=True
         for n in z.namelist():
             if n.startswith('classes') and n.endswith('.dex'):
                 ok,detail=verify_dex(z.read(n)); out['dex'][n]=detail
                 if not ok: raise RuntimeError(f'DEX verify failed: {n} {detail}')
+    alignment=int(cfg.get('native_library_alignment',16384)) if cfg else 16384
+    out['native_alignment']=verify_alignment(apk,alignment)
     r=subprocess.run(['jarsigner','-verify',str(apk)],capture_output=True,text=True); out['v1_ok']=r.returncode==0 and 'jar verified' in r.stdout.lower()
     out['v2']=verify_v2(apk)
+    expected_cert=str(cfg.get('expected_signing_cert_sha256','')).lower() if cfg else ''
+    if expected_cert and out['v2']['cert_sha256'].lower()!=expected_cert:
+        raise RuntimeError(f'wrong signing certificate: expected {expected_cert}, got {out["v2"]["cert_sha256"].lower()}')
     if not out['zip_ok'] or not out['v1_ok'] or not out['v2']['ok']: raise RuntimeError(out)
     return out
 
