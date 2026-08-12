@@ -1,14 +1,17 @@
 from __future__ import annotations
-import hashlib, struct, zlib
+import hashlib, json, struct, zlib
+from pathlib import Path
 
 from storage_boundary import verify_storage_boundary
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 # User-visible shell/runtime literals that still live directly in classes2.dex.
-# Replacements stay inside the existing string_data slot, so string offsets and
-# all method/class references remain unchanged. Real compatibility backend URLs,
-# inherited class descriptors and gameplay/rules messages are intentionally NOT
-# rewritten here.
+# These are intentionally disabled by default after the Preview 1 launch failure.
+# They stay here as an isolated experiment that can be re-enabled only after a
+# dedicated device smoke-test. Real compatibility backend URLs, inherited class
+# descriptors and gameplay/rules messages are never rewritten here.
 PRODUCT_SHELL_REPLACEMENTS = {
     'Share Pathbuilder 2e Character':
         'Share RuneSheet RU Character',
@@ -34,6 +37,11 @@ FIXED_THEME_TARGET_METHODS = {
     ('Lcom/redrazors/pathbuilder2e/MainActivity;', 'onCreate'),
     ('Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogTheme;', 'setTheme'),
 }
+
+
+def _runtime_flags() -> tuple[bool, bool]:
+    cfg = json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
+    return bool(cfg.get('dex_product_shell_enabled', False)), bool(cfg.get('dex_fixed_theme_enabled', False))
 
 
 def _uleb(d: bytes | bytearray, o: int):
@@ -75,11 +83,11 @@ def strings_with_meta(d: bytes):
 
 
 def _force_fixed_theme_refs(d: bytearray, strings: list[str]) -> None:
-    """Map all inherited Classic/Dark style choices to the RuneSheet AppTheme.
+    """Experimental bytecode patch; disabled in the default product build.
 
-    This preserves SharedPreferences and old dialog IDs for binary compatibility,
-    but a previously saved Classic/Dark preference can no longer change the
-    visual theme. Only the two pinned theme-selection methods are modified.
+    Preview 1 showed that statically valid DEX is not enough to prove launch
+    safety. Keep this implementation isolated until it passes a dedicated
+    device smoke-test; the product theme is fixed through resources/UI instead.
     """
     u32=lambda o:struct.unpack_from('<I',d,o)[0]
     type_size,type_off=u32(0x40),u32(0x44)
@@ -150,27 +158,29 @@ def _force_fixed_theme_refs(d: bytearray, strings: list[str]) -> None:
                 patched += 1; hits += 1
         per_method[methods[method_idx]]=hits
 
-    # Pinned 2.56 baseline: MainActivity has two refs and DialogTheme has two.
     if patched != 4 or any(v != 2 for v in per_method.values()):
         raise ValueError(f'unexpected fixed-theme patch count: total={patched}, per_method={per_method}')
 
 
 def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
-    """Patch pinned DEX strings without moving any string_data offsets.
+    """Patch only the DEX slots explicitly allowed by the product config.
 
-    The historical function name is kept because build.py already imports it.
-    New values may be shorter than their original slots; unused bytes are zeroed.
+    Default product builds keep the proven identity/data-path substitutions but
+    do not apply experimental product-shell strings or theme bytecode changes.
     """
     # Every transition build must first prove that the inherited local-storage
     # seam is still the pinned one and that cloud methods remain isolated.
     verify_storage_boundary(dex)
 
-    replacements = {**PRODUCT_SHELL_REPLACEMENTS, **replacements}
+    shell_enabled, fixed_theme_enabled = _runtime_flags()
+    effective = dict(replacements)
+    if shell_enabled:
+        effective = {**PRODUCT_SHELL_REPLACEMENTS, **effective}
 
     d = bytearray(dex)
     ss, so, meta = strings_with_meta(dex)
     by_text = {s:(i,off,cap) for i,off,cap,s in meta}
-    for old,new in replacements.items():
+    for old,new in effective.items():
         if old not in by_text:
             raise KeyError(f'DEX string not found: {old}')
         _,off,cap = by_text[old]
@@ -183,19 +193,22 @@ def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
 
     strings=[s for _,_,_,s in strings_with_meta(bytes(d))[2]]
     string_set=set(strings)
-    old_shell=set(PRODUCT_SHELL_REPLACEMENTS)
-    new_shell=set(PRODUCT_SHELL_REPLACEMENTS.values())
-    remaining=old_shell & string_set
-    missing_new=new_shell - string_set
     missing_gameplay=set(PROTECTED_GAMEPLAY_DEX_LITERALS) - string_set
-    if remaining:
-        raise ValueError(f'legacy product shell DEX strings remain: {sorted(remaining)!r}')
-    if missing_new:
-        raise ValueError(f'RuneSheet product shell DEX strings missing: {sorted(missing_new)!r}')
     if missing_gameplay:
         raise ValueError(f'protected gameplay DEX strings changed or missing: {sorted(missing_gameplay)!r}')
 
-    _force_fixed_theme_refs(d,strings)
+    if shell_enabled:
+        old_shell=set(PRODUCT_SHELL_REPLACEMENTS)
+        new_shell=set(PRODUCT_SHELL_REPLACEMENTS.values())
+        remaining=old_shell & string_set
+        missing_new=new_shell - string_set
+        if remaining:
+            raise ValueError(f'legacy product shell DEX strings remain: {sorted(remaining)!r}')
+        if missing_new:
+            raise ValueError(f'RuneSheet product shell DEX strings missing: {sorted(missing_new)!r}')
+
+    if fixed_theme_enabled:
+        _force_fixed_theme_refs(d,strings)
 
     # Re-parse raw MUTF-8 and ensure string_ids remain strictly sorted as required by ART.
     def mutf8_units(raw: bytes):
