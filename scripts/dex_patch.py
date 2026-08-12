@@ -3,20 +3,29 @@ import hashlib, struct, zlib
 
 
 # User-visible shell/runtime literals that still live directly in classes2.dex.
-# These replacements are deliberately exact-size so string_data offsets and all
-# method/class references remain unchanged. Real compatibility backend URLs and
-# inherited class descriptors are intentionally NOT rewritten here.
+# Replacements stay inside the existing string_data slot, so string offsets and
+# all method/class references remain unchanged. Real compatibility backend URLs,
+# inherited class descriptors and gameplay/rules messages are intentionally NOT
+# rewritten here.
 PRODUCT_SHELL_REPLACEMENTS = {
+    'Share Pathbuilder 2e Character':
+        'Share RuneSheet RU Character',
+    '.  To view this build you need to open it on an android device with version 256+ Pathbuilder 2e installed. ':
+        '.  To view this build, open it on Android with RuneSheet RU installed. ',
     'https://gitlab.com/doctor.unspeakable/pathbuilder-2e/-/issues':
-        'https://github.com/ErnyPay/PF2e-Builder-RU/issues/new?x=12345',
-    '«Воспитанный верой» недоступен в Pathbuilder 2e':
-        '«Воспитанный верой» недоступен в RuneSheet RU  ',
+        'https://github.com/ErnyPay/PF2e-Builder-RU/issues',
     'Нажмите «Назад», чтобы вернуться в Pathbuilder':
-        'Нажмите «Назад», чтобы вернуться в RuneSheet  ',
+        'Нажмите «Назад» для возврата в RuneSheet RU',
     'Удалить старое изображение портрета из папки Pathbuilder2e? Внимание: оно будет удалено у всех персонажей, использующих этот портрет!':
-        'Удалить старое изображение портрета из папки RuneSheet RU ? Внимание: оно будет удалено у всех персонажей, использующих этот портрет!',
+        'Удалить старое изображение портрета из папки RuneSheet RU? Внимание: оно будет удалено у всех персонажей, использующих этот портрет!',
     'Файл не распознан как база данных Pathbuilder 2e!':
-        'Файл не распознан как база данных RuneSheet RU  !',
+        'Файл не распознан как база данных RuneSheet RU!',
+}
+
+# This is gameplay-facing behavior, not product shell. Keep it as an explicit
+# negative guard so future ownership passes do not silently rewrite it again.
+PROTECTED_GAMEPLAY_DEX_LITERALS = {
+    '«Воспитанный верой» недоступен в Pathbuilder 2e',
 }
 
 FIXED_THEME_TARGET_METHODS = {
@@ -57,7 +66,8 @@ def strings_with_meta(d: bytes):
         _, q, _ = _uleb(d, off)
         e = d.index(0, q)
         s = d[q:e].decode('utf-8','replace')
-        # DEX string_data_items are contiguous in this file; physical capacity is next string offset where sorted ids are physical order too.
+        # Pinned baseline string_data items are contiguous. The original item
+        # size is therefore a safe maximum slot size for shorter shell strings.
         out.append((i, off, e+1-off, s))
     return ss, so, out
 
@@ -144,8 +154,11 @@ def _force_fixed_theme_refs(d: bytearray, strings: list[str]) -> None:
 
 
 def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
-    # Every product build gets the safe shell cleanup in addition to the explicit
-    # package/data-path replacements supplied by build.py.
+    """Patch pinned DEX strings without moving any string_data offsets.
+
+    The historical function name is kept because build.py already imports it.
+    New values may be shorter than their original slots; unused bytes are zeroed.
+    """
     replacements = {**PRODUCT_SHELL_REPLACEMENTS, **replacements}
 
     d = bytearray(dex)
@@ -154,13 +167,13 @@ def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
     for old,new in replacements.items():
         if old not in by_text:
             raise KeyError(f'DEX string not found: {old}')
-        i,off,cap = by_text[old]
+        _,off,cap = by_text[old]
         old_item, new_item = _item(old), _item(new)
         if len(old_item) != cap:
             raise ValueError(f'unexpected DEX item size for {old!r}')
-        if len(new_item) != cap:
-            raise ValueError(f'replacement must preserve exact DEX item size: {old!r} ({cap}) -> {new!r} ({len(new_item)})')
-        d[off:off+cap] = new_item
+        if len(new_item) > cap:
+            raise ValueError(f'replacement exceeds DEX string slot: {old!r} ({cap}) -> {new!r} ({len(new_item)})')
+        d[off:off+cap] = new_item + b'\0'*(cap-len(new_item))
 
     strings=[s for _,_,_,s in strings_with_meta(bytes(d))[2]]
     _force_fixed_theme_refs(d,strings)
