@@ -11,7 +11,7 @@ TYPE_DIMENSION = 0x05
 TYPE_INT_BOOLEAN = 0x12
 TYPE_INT_DEC = 0x10
 NO_INDEX = 0xFFFFFFFF
-THEME_OPTION_ID = 0x7F090119
+ABOUT_SLOT_ID = 0x7F090119  # inherited theme row, reused as safe RuneSheet About entry
 NAV_PATRON_ID = 0x7F090349
 ANDROID_VISIBLE = 0x01010194
 LEGACY_PROMO_IDS = {
@@ -50,6 +50,7 @@ SERVICE_SURFACES = {
     'res/layout/dialog_fragment_export_pdf.xml',
     'res/layout/dialog_fragment_export_stat_block.xml',
     'res/layout/dialog_fragment_campaign_management.xml',
+    'res/layout/dialog_fragment_move_folder.xml',
 }
 
 OLD_AD_APP_ID = 'ca-app-pub-8849615353397054~3022553003'
@@ -97,7 +98,7 @@ LAYOUT_REPLACEMENTS = {
     'res/layout/dialog_fragment_frontpage_more.xml': {
         'App Options': 'Настройки RuneSheet', 'Custom Packs': 'Пользовательские наборы',
         'Database Management': 'Данные персонажей', 'Manage Campaigns': 'Кампании',
-        'Open Character by ID': 'Открыть по ID (совместимость)', 'Set App Theme': '',
+        'Open Character by ID': 'Открыть по ID (совместимость)', 'Set App Theme': 'О RuneSheet',
     },
     'res/layout/dialog_fragment_options.xml': {
         'Options': 'Настройки RuneSheet', 'Standard Options': 'Основные', 'Advanced Options': 'Расширенные',
@@ -130,8 +131,8 @@ LAYOUT_REPLACEMENTS = {
     },
     'res/layout/dialog_fragment_json.xml': {'Export JSON': 'Экспорт JSON', 'View JSON file': 'Открыть JSON'},
     'res/layout/dialog_fragment_theme.xml': {
-        'Set App Theme': 'Стиль RuneSheet',
-        'App Theme can be set at any time via the App Options button on the front page. Classic or Dark may give a better experience on low end devices.': 'В RuneSheet используется единый фиксированный стиль приложения.',
+        'Set App Theme': 'RuneSheet RU',
+        'App Theme can be set at any time via the App Options button on the front page. Classic or Dark may give a better experience on low end devices.': 'RuneSheet RU — лист и конструктор персонажа PF2e. В приложении используется единый фиксированный стиль; сетевые функции совместимости отмечены отдельно.',
         'Select Theme': '',
         'Parchment': '', 'Classic': '', 'Dark': '',
     },
@@ -144,6 +145,10 @@ LAYOUT_REPLACEMENTS = {
     },
     'res/layout/dialog_fragment_save.xml': {
         'Make a new copy': 'Создать копию',
+        'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
+    },
+    'res/layout/dialog_fragment_move_folder.xml': {
+        'Copy Character': 'Копировать персонажа',
         'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
     },
     'res/layout/dialog_fragment_load_new.xml': {},
@@ -235,8 +240,13 @@ def _relax_service_text(blob: bytes) -> bytes:
 
 
 def _hide_frontpage_legacy_rows(blob: bytes) -> bytes:
-    """Keep inherited view IDs/listener wiring but remove obsolete product choices."""
-    return _collapse_id_rows(blob,{THEME_OPTION_ID} | LEGACY_PROMO_IDS)
+    """Keep inherited promo view IDs/listener wiring but remove obsolete products.
+
+    The former theme row is intentionally NOT hidden anymore: it is reused as
+    an in-app `О RuneSheet` entry. DialogTheme still exists for binary safety,
+    but all theme-choice rows inside it remain collapsed.
+    """
+    return _collapse_id_rows(blob,LEGACY_PROMO_IDS)
 
 
 def _hide_creator_menu_item(blob: bytes) -> bytes:
