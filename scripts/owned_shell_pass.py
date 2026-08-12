@@ -3,7 +3,7 @@ from __future__ import annotations
 import struct
 
 from manifest_patch import _find_manifest_pool, _iter_start_elements, _u32, _put_u32, build_string_pool
-from sheet_dialog_pass import _add_android_attr
+from sheet_dialog_pass import _add_android_attr, patch_root_background
 
 UTF8_FLAG = 0x100
 TYPE_REFERENCE = 0x01
@@ -27,6 +27,27 @@ DRAWER_MENUS = {
     'res/menu/activity_main_drawer.xml',
     'res/menu/activity_main_drawer_icons.xml',
 }
+
+# Non-gameplay shells that should visually belong to RuneSheet as a coherent
+# service layer. Rules browsers/content dialogs are intentionally not included.
+SERVICE_SURFACES = {
+    'res/layout/dialog_fragment_frontpage_more.xml',
+    'res/layout/dialog_fragment_options.xml',
+    'res/layout/dialog_fragment_database_management.xml',
+    'res/layout/dialog_fragment_custom_pack.xml',
+    'res/layout/dialog_fragment_upgrade.xml',
+    'res/layout/dialog_fragment_report_bug.xml',
+    'res/layout/dialog_fragment_report_bug_actual.xml',
+    'res/layout/dialog_fragment_open_by_id.xml',
+    'res/layout/dialog_fragment_firebase_connect.xml',
+    'res/layout/dialog_fragment_json.xml',
+    'res/layout/dialog_fragment_theme.xml',
+    'res/layout/dialog_fragment_new_save.xml',
+    'res/layout/dialog_fragment_save.xml',
+    'res/layout/dialog_fragment_load_new.xml',
+    'res/layout/dialog_fragment_liences.xml',
+}
+
 OLD_AD_APP_ID = 'ca-app-pub-8849615353397054~3022553003'
 OLD_BANNER_ID = 'ca-app-pub-8849615353397054/1681551174'
 TEST_AD_APP_ID = 'ca-app-pub-3940256099942544~3347511713'
@@ -69,6 +90,7 @@ LAYOUT_REPLACEMENTS = {
         'Custom Packs': 'Пользовательские наборы', 'Import': 'Импорт', 'Import Custom Pack': 'Импорт набора',
     },
     'res/layout/dialog_fragment_upgrade.xml': {'Upgrade App': 'Полный доступ RuneSheet'},
+    'res/layout/dialog_fragment_report_bug.xml': {},
     'res/layout/dialog_fragment_report_bug_actual.xml': {
         'Submit Bug': 'Отправить отчёт', 'Your bug': 'Описание ошибки', 'Optional email address': 'Email (необязательно)',
         'By including an email address you give permission to receive emails regarding this bug.  Your email address will not be visible to other users.': 'Email нужен только для ответа по отчёту и не показывается другим пользователям.',
@@ -90,6 +112,20 @@ LAYOUT_REPLACEMENTS = {
         'Select Theme': '',
         'Parchment': '', 'Classic': '', 'Dark': '',
     },
+    'res/layout/dialog_fragment_new_save.xml': {
+        'First Save': 'Первое сохранение',
+        'Local Folder': 'Локальная папка',
+        'Save to GDrive': 'Облако (совместимость)',
+        'Save to Local Folder': 'Сохранить локально',
+        'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
+    },
+    'res/layout/dialog_fragment_save.xml': {
+        'Make a new copy': 'Создать копию',
+        'Warning: cloud storage will use mobile data allowances where wifi is not available.': 'Облачное сохранение может использовать мобильный интернет при отсутствии Wi-Fi.',
+    },
+    'res/layout/dialog_fragment_load_new.xml': {},
+    'res/layout/dialog_fragment_liences.xml': {},
+    'res/layout/listview_item_load.xml': {'Copy to Folder': 'Копировать в папку'},
     'res/menu/activity_main_drawer.xml': {
         'About Creator': '',
         'Connect to GM': 'GM-связь (совместимость)',
@@ -213,6 +249,8 @@ def patch_manifest_owned_shell(blob: bytes) -> bytes:
 def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
     replacements = LAYOUT_REPLACEMENTS.get(path)
     out = _replace_xml_strings(blob, replacements) if replacements else blob
+    if path in SERVICE_SURFACES:
+        out = patch_root_background(out)
     if path == 'res/layout/dialog_fragment_frontpage_more.xml':
         out = _hide_frontpage_legacy_rows(out)
     elif path == 'res/layout/dialog_fragment_theme.xml':
