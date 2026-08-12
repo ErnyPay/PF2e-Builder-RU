@@ -10,7 +10,8 @@ OLD_AD_IDS=(
     b'ca-app-pub-8849615353397054~3022553003',
     b'ca-app-pub-8849615353397054/1681551174',
 )
-THEME_OPTION_ID=0x7F090119
+ABOUT_SLOT_ID=0x7F090119
+THEME_DIALOG_COLLAPSE_IDS={0x7F09011C,0x7F09011A,0x7F09011B,0x7F0900FC}
 TYPE_REFERENCE=0x01
 TYPE_DIMENSION=0x05
 
@@ -48,20 +49,43 @@ def inspect_manifest(blob:bytes):
             out['provider_authorities'].append(_xml_attr_value(strings,*amap['authorities'][1:]))
     return out
 
-def verify_fixed_theme(blob:bytes):
-    p=_find_manifest_pool(blob); strings=p.strings
-    hidden=False
-    for _,tag,attrs in _iter_start_elements(blob,strings):
-        if tag!='LinearLayout': continue
+def verify_fixed_theme(front_blob:bytes,theme_blob:bytes):
+    """Verify there is no user-selectable theme while keeping the old runtime IDs.
+
+    The former front-page theme row is now a safe `О RuneSheet` entry which opens
+    the inherited DialogTheme container. Every actual Classic/Dark/Parchment
+    control inside that dialog must remain collapsed to 0dp.
+    """
+    fp=_find_manifest_pool(front_blob); front_strings=fp.strings
+    if 'О RuneSheet' not in front_strings:
+        raise RuntimeError('RuneSheet About entry is missing from the retired theme slot')
+    if 'Set App Theme' in front_strings or 'Оформление' in front_strings:
+        raise RuntimeError('old theme selector wording is still user-visible')
+
+    tp=_find_manifest_pool(theme_blob); theme_strings=tp.strings
+    forbidden={'Select Theme','Parchment','Classic','Dark'}
+    leaked=sorted(forbidden & set(theme_strings))
+    if leaked:
+        raise RuntimeError(f'theme choices are still present: {leaked}')
+
+    collapsed=set()
+    for _,_,attrs in _iter_start_elements(theme_blob,theme_strings):
         amap={name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
         ident=amap.get('id')
-        if not ident or ident[2]!=TYPE_REFERENCE or ident[3]!=THEME_OPTION_ID: continue
+        if not ident or ident[2]!=TYPE_REFERENCE or ident[3] not in THEME_DIALOG_COLLAPSE_IDS:
+            continue
         h=amap.get('layout_height')
-        hidden=bool(h and h[2]==TYPE_DIMENSION and (h[3]>>8)==0)
-        break
-    if not hidden: raise RuntimeError('theme selector is not collapsed')
-    if 'Set App Theme' in strings or 'Оформление' in strings: raise RuntimeError('theme selector wording is still user-visible')
-    return {'ok':True,'theme_option_id':hex(THEME_OPTION_ID),'collapsed':True}
+        if h and h[2]==TYPE_DIMENSION and (h[3]>>8)==0:
+            collapsed.add(ident[3])
+    missing=THEME_DIALOG_COLLAPSE_IDS-collapsed
+    if missing:
+        raise RuntimeError(f'theme controls are not collapsed: {[hex(x) for x in sorted(missing)]}')
+    return {
+        'ok':True,
+        'about_slot_id':hex(ABOUT_SLOT_ID),
+        'about_entry':True,
+        'theme_choice_controls_collapsed':[hex(x) for x in sorted(collapsed)],
+    }
 
 def verify_alignment(apk:Path,alignment:int):
     checked=[]; bad=[]
@@ -141,7 +165,10 @@ def verify(apk:Path, expected_package_strings=None, protected_assets=PROTECTED_A
             old_auth=[a for a in out['manifest']['provider_authorities'] if isinstance(a,str) and a.startswith('com.redrazors.pathbuilder2e')]
             if old_auth: raise RuntimeError(f'old provider authorities remain: {old_auth}')
             if cfg.get('theme_switching_enabled') is False:
-                out['fixed_theme']=verify_fixed_theme(z.read('res/layout/dialog_fragment_frontpage_more.xml'))
+                out['fixed_theme']=verify_fixed_theme(
+                    z.read('res/layout/dialog_fragment_frontpage_more.xml'),
+                    z.read('res/layout/dialog_fragment_theme.xml'),
+                )
         scan=manifest+z.read('resources.arsc')
         leaked=[x.decode() for x in OLD_AD_IDS if x in scan]
         if leaked: raise RuntimeError(f'production AdMob IDs remain: {leaked}')
