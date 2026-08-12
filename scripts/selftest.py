@@ -15,8 +15,8 @@ assert cfg['application_id']=='com.pf2ebuilder.ru.producty', 'RuneSheet update p
 assert cfg['file_provider_authority']=='com.runesheet.producty.file.provider', 'RuneSheet FileProvider authority is locked'
 assert len(cfg['application_id'].encode('ascii')) == len(old.encode('ascii'))
 assert len(cfg['file_provider_authority'].encode('ascii')) == len((old+'.provider').encode('ascii'))
-assert cfg.get('version_name')=='1.0.0-rc2'
-assert cfg.get('version_code')==1001
+assert cfg.get('version_name')=='1.0.0'
+assert cfg.get('version_code')==1002
 
 cert=cfg.get('expected_signing_cert_sha256','')
 assert re.fullmatch(r'[0-9a-f]{64}',cert)
@@ -43,8 +43,7 @@ for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
     assert len(_item(new_text))<=len(_item(old_text))
 assert not (set(PRODUCT_SHELL_REPLACEMENTS) & set(PROTECTED_GAMEPLAY_DEX_LITERALS))
 
-# RC2 release hardening is resource/manifest-only. Legacy external actions are
-# hidden instead of changing executable DEX immediately before release.
+# Final 1.0 keeps the RC2 release hardening exactly as device-tested.
 assert CONFIG_PROVIDER == 'com.redrazors.pathbuilder2e.ConfigProvider'
 assert DRAWER_HIDE_IDS == {0x7F09034E, 0x7F09034F}
 assert OPEN_BY_ID_ROW == 0x7F0900D5
@@ -78,4 +77,4 @@ assert cloud_pairs
 assert not (local_pairs & cloud_pairs)
 assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs)
 
-print('RC2 identity, permanent signing key, no-cloud, hidden legacy actions, launch-safe DEX and storage guards: OK')
+print('1.0.0 identity, permanent signing key, RC2 hardening, no-cloud, launch-safe DEX and storage guards: OK')
