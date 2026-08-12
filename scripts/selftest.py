@@ -23,6 +23,7 @@ assert re.fullmatch(r'[0-9a-f]{64}',cert), 'expected_signing_cert_sha256 must be
 assert cert=='e8e86e8c2beb58db4ca242a65ac9b970f0c9f736321ed1057814d64f7dfa7c90', 'update certificate is locked to the accepted RuneSheet line'
 assert cfg.get('fixed_theme')=='runesheet_antique', 'RuneSheet uses one fixed product theme'
 assert cfg.get('theme_switching_enabled') is False, 'theme switching must stay disabled'
+assert cfg.get('cloud_storage_enabled') is False, 'cloud storage must stay disabled until explicitly reintroduced'
 assert cfg.get('native_library_alignment')==16384, 'stored native libraries must use 16K alignment'
 
 # Runtime shell strings stay inside their original string_data slots. Shorter
@@ -34,4 +35,4 @@ for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
 # Product ownership work must never rewrite gameplay/rules messages.
 assert not (set(PRODUCT_SHELL_REPLACEMENTS) & set(PROTECTED_GAMEPLAY_DEX_LITERALS)), 'gameplay literal leaked into product shell replacements'
 
-print('configuration, release-line, runtime-shell and gameplay guards: OK')
+print('configuration, release-line, no-cloud, runtime-shell and gameplay guards: OK')
