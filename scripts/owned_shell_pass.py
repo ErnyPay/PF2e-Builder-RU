@@ -9,6 +9,7 @@ UTF8_FLAG = 0x100
 TYPE_REFERENCE = 0x01
 TYPE_DIMENSION = 0x05
 TYPE_INT_BOOLEAN = 0x12
+TYPE_INT_DEC = 0x10
 NO_INDEX = 0xFFFFFFFF
 THEME_OPTION_ID = 0x7F090119
 NAV_PATRON_ID = 0x7F090349
@@ -213,6 +214,26 @@ def _collapse_id_rows(blob: bytes, target_ids: set[int]) -> bytes:
     return bytes(out)
 
 
+def _relax_service_text(blob: bytes) -> bytes:
+    """Allow long service-shell labels to wrap without touching game content."""
+    pool = _find_manifest_pool(blob)
+    out = bytearray(blob)
+    for _, tag, attrs in _iter_start_elements(bytes(out), pool.strings):
+        if tag not in ('TextView', 'CheckedTextView'):
+            continue
+        amap = {name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
+        width = amap.get('layout_width')
+        if width and width[2] == TYPE_DIMENSION and 0 < (width[3] >> 8) <= 44:
+            continue
+        if 'singleLine' in amap:
+            _set_typed(out, amap['singleLine'][0], TYPE_INT_BOOLEAN, 0)
+        if 'maxLines' in amap and amap['maxLines'][3] <= 1:
+            _set_typed(out, amap['maxLines'][0], TYPE_INT_DEC, 2)
+        if 'lines' in amap and amap['lines'][3] <= 1:
+            _set_typed(out, amap['lines'][0], TYPE_INT_DEC, 2)
+    return bytes(out)
+
+
 def _hide_frontpage_legacy_rows(blob: bytes) -> bytes:
     """Keep inherited view IDs/listener wiring but remove obsolete product choices."""
     return _collapse_id_rows(blob,{THEME_OPTION_ID} | LEGACY_PROMO_IDS)
@@ -284,6 +305,7 @@ def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
     out = _replace_xml_strings(blob, replacements) if replacements else blob
     if path in SERVICE_SURFACES:
         out = patch_root_background(out)
+        out = _relax_service_text(out)
     if path == 'res/layout/dialog_fragment_frontpage_more.xml':
         out = _hide_frontpage_legacy_rows(out)
     elif path == 'res/layout/dialog_fragment_theme.xml':
