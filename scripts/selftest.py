@@ -26,11 +26,14 @@ assert cert=='e8e86e8c2beb58db4ca242a65ac9b970f0c9f736321ed1057814d64f7dfa7c90',
 assert cfg.get('fixed_theme')=='runesheet_antique', 'RuneSheet uses one fixed product theme'
 assert cfg.get('theme_switching_enabled') is False, 'theme switching must stay disabled'
 assert cfg.get('cloud_storage_enabled') is False, 'cloud storage must stay disabled until explicitly reintroduced'
+assert cfg.get('dex_product_shell_enabled') is False, 'unproven DEX product branding must stay disabled'
+assert cfg.get('dex_fixed_theme_enabled') is False, 'unproven DEX theme patch must stay disabled'
 assert cfg.get('native_library_alignment')==16384, 'stored native libraries must use 16K alignment'
 
 # Runtime shell strings stay inside their original string_data slots. Shorter
 # values are safe because dex_patch zero-fills the unused tail without moving
-# any offsets; longer values are forbidden.
+# any offsets; longer values are forbidden. The experiment remains available
+# for targeted smoke-tests but is not part of the default product build.
 for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
     assert len(_item(new_text))<=len(_item(old_text)), f'DEX shell replacement exceeds slot: {old_text!r}'
 
@@ -58,4 +61,4 @@ assert cloud_pairs, 'cloud isolation seam is empty'
 assert not (local_pairs & cloud_pairs), 'cloud/local storage seam overlap'
 assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs), 'cloud helper leaked into local seam'
 
-print('configuration, release-line, no-cloud, runtime-shell, gameplay and storage-boundary guards: OK')
+print('configuration, release-line, no-cloud, launch-safe DEX, gameplay and storage-boundary guards: OK')
