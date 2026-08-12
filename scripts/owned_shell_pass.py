@@ -3,12 +3,16 @@ from __future__ import annotations
 import struct
 
 from manifest_patch import _find_manifest_pool, _iter_start_elements, _u32, _put_u32, build_string_pool
+from sheet_dialog_pass import _add_android_attr
 
 UTF8_FLAG = 0x100
 TYPE_REFERENCE = 0x01
 TYPE_DIMENSION = 0x05
+TYPE_INT_BOOLEAN = 0x12
 NO_INDEX = 0xFFFFFFFF
 THEME_OPTION_ID = 0x7F090119
+NAV_PATRON_ID = 0x7F090349
+ANDROID_VISIBLE = 0x01010194
 LEGACY_PROMO_IDS = {
     0x7F090114, # Starbuilder cross-promo
     0x7F0900D6, # Pathbuilder 1e cross-promo
@@ -18,6 +22,10 @@ THEME_DIALOG_COLLAPSE_IDS = {
     0x7F09011A, # classic row
     0x7F09011B, # dark row
     0x7F0900FC, # select-theme action
+}
+DRAWER_MENUS = {
+    'res/menu/activity_main_drawer.xml',
+    'res/menu/activity_main_drawer_icons.xml',
 }
 OLD_AD_APP_ID = 'ca-app-pub-8849615353397054~3022553003'
 OLD_BANNER_ID = 'ca-app-pub-8849615353397054/1681551174'
@@ -82,6 +90,18 @@ LAYOUT_REPLACEMENTS = {
         'Select Theme': '',
         'Parchment': '', 'Classic': '', 'Dark': '',
     },
+    'res/menu/activity_main_drawer.xml': {
+        'About Creator': '',
+        'Connect to GM': 'GM-связь (совместимость)',
+        'Report Bug': 'Отправить отчёт',
+        'Upgrade and Remove Adverts': 'Полный доступ RuneSheet',
+    },
+    'res/menu/activity_main_drawer_icons.xml': {
+        'About Creator': '',
+        'Connect to GM': 'GM-связь (совместимость)',
+        'Report Bug': 'Отправить отчёт',
+        'Upgrade and Remove Adverts': 'Полный доступ RuneSheet',
+    },
 }
 
 
@@ -127,6 +147,15 @@ def _collapse_id_rows(blob: bytes, target_ids: set[int]) -> bytes:
 def _hide_frontpage_legacy_rows(blob: bytes) -> bytes:
     """Keep inherited view IDs/listener wiring but remove obsolete product choices."""
     return _collapse_id_rows(blob,{THEME_OPTION_ID} | LEGACY_PROMO_IDS)
+
+
+def _hide_creator_menu_item(blob: bytes) -> bytes:
+    # Keep nav_patron ID so NavigationControl remains binary-compatible, but the
+    # old creator/Patreon item is not part of the RuneSheet product navigation.
+    return _add_android_attr(
+        blob,target_tag='item',target_id=NAV_PATRON_ID,name='visible',
+        attr_rid=ANDROID_VISIBLE,dtype=TYPE_INT_BOOLEAN,data=0,
+    )
 
 
 def patch_arsc_owned_shell(blob: bytes) -> bytes:
@@ -188,4 +217,6 @@ def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
         out = _hide_frontpage_legacy_rows(out)
     elif path == 'res/layout/dialog_fragment_theme.xml':
         out = _collapse_id_rows(out,THEME_DIALOG_COLLAPSE_IDS)
+    elif path in DRAWER_MENUS:
+        out = _hide_creator_menu_item(out)
     return out
