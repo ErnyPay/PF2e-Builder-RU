@@ -7,16 +7,27 @@ from storage_boundary import load_storage_boundary, _pairs
 ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
 storage_cfg=load_storage_boundary()
+release_baseline=json.loads((ROOT/'config/release_baseline.json').read_text(encoding='utf8'))
 old='com.redrazors.pathbuilder2e'
 
 assert cfg['application_id']=='com.pf2ebuilder.ru.producty', 'RuneSheet update package is locked'
 assert cfg['file_provider_authority']=='com.runesheet.producty.file.provider', 'RuneSheet FileProvider authority is locked'
 assert len(cfg['application_id'].encode('ascii')) == len(old.encode('ascii'))
 assert len(cfg['file_provider_authority'].encode('ascii')) == len((old+'.provider').encode('ascii'))
+assert cfg.get('version_name')=='1.0.0-rc1'
+assert cfg.get('version_code')==1000
 
 cert=cfg.get('expected_signing_cert_sha256','')
 assert re.fullmatch(r'[0-9a-f]{64}',cert)
-assert cert=='e8e86e8c2beb58db4ca242a65ac9b970f0c9f736321ed1057814d64f7dfa7c90'
+assert cert=='0b780e6e9b38b3c05ad0e0af780b77a13700cfdfb767af2724942db4cf0b29f7', 'RC1 certificate is permanently locked'
+assert cfg.get('release_key_promoted_from_preview') is True
+assert cfg.get('release_baseline')=='0.6.0-preview.5-dex-rollback'
+assert release_baseline['signing_cert_sha256']==cert
+assert release_baseline['application_id']==cfg['application_id']
+assert release_baseline['source_version']=='0.6.0-preview.5'
+assert len(release_baseline['dex_sha256'])==5
+assert all(re.fullmatch(r'[0-9a-f]{64}',x) for x in release_baseline['dex_sha256'].values())
+
 assert cfg.get('fixed_theme')=='runesheet_antique'
 assert cfg.get('theme_switching_enabled') is False
 assert cfg.get('cloud_storage_enabled') is False
@@ -55,4 +66,4 @@ assert cloud_pairs
 assert not (local_pairs & cloud_pairs)
 assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs)
 
-print('release-line, no-cloud, launch-safe DEX, gameplay and quarantined-storage guards: OK')
+print('RC1 identity, permanent signing key, no-cloud, launch-safe DEX, gameplay and quarantined-storage guards: OK')
