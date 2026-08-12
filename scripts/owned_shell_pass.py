@@ -46,6 +46,9 @@ SERVICE_SURFACES = {
     'res/layout/dialog_fragment_save.xml',
     'res/layout/dialog_fragment_load_new.xml',
     'res/layout/dialog_fragment_liences.xml',
+    'res/layout/dialog_fragment_export_pdf.xml',
+    'res/layout/dialog_fragment_export_stat_block.xml',
+    'res/layout/dialog_fragment_campaign_management.xml',
 }
 
 OLD_AD_APP_ID = 'ca-app-pub-8849615353397054~3022553003'
@@ -68,6 +71,25 @@ ARSC_REPLACEMENTS = {
         'Полный доступ пока проверяется через унаследованный Google Play Billing. Если ранее приобретённый доступ не восстановился, убедитесь, что на устройстве выбран тот же Google-аккаунт. Перед переустановкой обязательно экспортируйте локальную базу персонажей. После очистки кэша Google Play и перезагрузки восстановление покупки может занять некоторое время. Если проблема сохраняется, используйте «Отправить отчёт».',
     OLD_AD_APP_ID: TEST_AD_APP_ID,
     OLD_BANNER_ID: TEST_BANNER_ID,
+}
+
+DRAWER_REPLACEMENTS = {
+    'About Creator': '',
+    'Character Options': 'Настройки персонажа',
+    'Character is remastered!': 'Ремастер включён',
+    'Connect to GM': 'GM-связь (совместимость)',
+    'Convert to Remaster Rules': 'Перейти на ремастер',
+    'Custom Ability Increases': 'Настройка характеристик',
+    'Custom Feat Choices': 'Настройка черт',
+    'Custom Skill Increases': 'Настройка навыков',
+    'Exit to Start Page': 'На стартовый экран',
+    'Export Character': 'Экспорт персонажа',
+    'Feat Browser': 'Каталог черт',
+    'Open Character': 'Открыть персонажа',
+    'Remaster Information': 'О ремастере',
+    'Report Bug': 'Отправить отчёт',
+    'Save': 'Сохранить',
+    'Upgrade and Remove Adverts': 'Полный доступ RuneSheet',
 }
 
 LAYOUT_REPLACEMENTS = {
@@ -125,19 +147,30 @@ LAYOUT_REPLACEMENTS = {
     },
     'res/layout/dialog_fragment_load_new.xml': {},
     'res/layout/dialog_fragment_liences.xml': {},
+    'res/layout/dialog_fragment_export_pdf.xml': {
+        'Export Character': 'Экспорт персонажа',
+        'Export Character Sheet': 'Лист персонажа (PDF)',
+        'Export JSON file': 'Файл JSON',
+        'Export Spellbook': 'Книга заклинаний',
+        'Export Stat Block': 'Статблок',
+        'Share character by link': 'Поделиться ссылкой (совместимость)',
+        'Dual Class is not supported on the PDF Character Sheet': 'Двойной класс пока не поддерживается в PDF-листе персонажа',
+    },
+    'res/layout/dialog_fragment_export_stat_block.xml': {
+        'Export PDF': 'Экспорт PDF',
+        'Export Statblock': 'Экспорт статблока',
+        'Hide all action descriptions': 'Скрыть все описания действий',
+        'Hide common action descriptions (Shield Block etc)': 'Скрыть описания обычных действий (Shield Block и т. п.)',
+    },
+    'res/layout/dialog_fragment_campaign_management.xml': {
+        'Campaign Management': 'Кампании',
+        'Add Campaign': 'Добавить кампанию',
+        'Import Campaign': 'Импорт кампании',
+        'You can create, export and import Campaigns here to ensure that character creation uses specific options and sources.': 'Здесь можно создавать, экспортировать и импортировать кампании с нужными настройками и источниками.',
+    },
     'res/layout/listview_item_load.xml': {'Copy to Folder': 'Копировать в папку'},
-    'res/menu/activity_main_drawer.xml': {
-        'About Creator': '',
-        'Connect to GM': 'GM-связь (совместимость)',
-        'Report Bug': 'Отправить отчёт',
-        'Upgrade and Remove Adverts': 'Полный доступ RuneSheet',
-    },
-    'res/menu/activity_main_drawer_icons.xml': {
-        'About Creator': '',
-        'Connect to GM': 'GM-связь (совместимость)',
-        'Report Bug': 'Отправить отчёт',
-        'Upgrade and Remove Adverts': 'Полный доступ RuneSheet',
-    },
+    'res/menu/activity_main_drawer.xml': DRAWER_REPLACEMENTS,
+    'res/menu/activity_main_drawer_icons.xml': DRAWER_REPLACEMENTS,
 }
 
 
