@@ -9,6 +9,10 @@ TYPE_REFERENCE = 0x01
 TYPE_DIMENSION = 0x05
 NO_INDEX = 0xFFFFFFFF
 THEME_OPTION_ID = 0x7F090119
+LEGACY_PROMO_IDS = {
+    0x7F090114, # Starbuilder cross-promo
+    0x7F0900D6, # Pathbuilder 1e cross-promo
+}
 THEME_DIALOG_COLLAPSE_IDS = {
     0x7F09011C, # parchment row
     0x7F09011A, # classic row
@@ -31,6 +35,8 @@ ARSC_REPLACEMENTS = {
         'RuneSheet RU может создать SQL-базу персонажей во внешнем хранилище. Без разрешения база останется во внутреннем хранилище и удалится вместе с приложением.',
     'Обновитесь до полной версии Pathbuilder 2e для Android, чтобы убрать рекламу. Также станут доступны животные-компаньоны, фамильяры, облачное хранилище и дополнительные настройки, включая выбор способностей, навыков, доспехов, оружия и снаряжения.\n\nВерсии для Android и Web являются отдельными продуктами и приобретаются отдельно.':
         'Полный доступ открывает дополнительные функции персонажа и облачное хранение. Лицензия и часть сетевых функций пока работают через унаследованный слой совместимости.\n\nРекламные компоненты в RuneSheet RU отключены.',
+    'If you have just reinstalled the app, have previously bought the full unlock and the app is not unlocking, there may be an error with the Play Store on your device. Try the following to fix:\n\n 1) If you have multiple accounts on your device, make sure you definitely logged into your device and playstore with the account that you bought the app on. \n\n2) Uninstall the app (export the database if you have local files first). \n\n3) Go to settings -> Apps -> Google Play Store -> Storage and Cache -> Clear Storage and Clear Cache. \n\n4) Reboot the device \n\n5) Reinstall the app. (import the database if you had local files). The play store cache can sometimes take up to 24 hours to populate on a new device, so please give it some time to resolve.\n\n\nIf you continue to have issues please use Report Bug and open a new issue.':
+        'Полный доступ пока проверяется через унаследованный Google Play Billing. Если ранее приобретённый доступ не восстановился, убедитесь, что на устройстве выбран тот же Google-аккаунт. Перед переустановкой обязательно экспортируйте локальную базу персонажей. После очистки кэша Google Play и перезагрузки восстановление покупки может занять некоторое время. Если проблема сохраняется, используйте «Отправить отчёт».',
     OLD_AD_APP_ID: TEST_AD_APP_ID,
     OLD_BANNER_ID: TEST_BANNER_ID,
 }
@@ -118,13 +124,9 @@ def _collapse_id_rows(blob: bytes, target_ids: set[int]) -> bytes:
     return bytes(out)
 
 
-def _hide_theme_option(blob: bytes) -> bytes:
-    """Keep inherited IDs for runtime safety while removing all theme choices.
-
-    Old dialog code still looks these views up and can attach listeners. Physical
-    removal risks NullPointerException; 0dp rows preserve the runtime contract.
-    """
-    return _collapse_id_rows(blob,{THEME_OPTION_ID})
+def _hide_frontpage_legacy_rows(blob: bytes) -> bytes:
+    """Keep inherited view IDs/listener wiring but remove obsolete product choices."""
+    return _collapse_id_rows(blob,{THEME_OPTION_ID} | LEGACY_PROMO_IDS)
 
 
 def patch_arsc_owned_shell(blob: bytes) -> bytes:
@@ -183,7 +185,7 @@ def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
     replacements = LAYOUT_REPLACEMENTS.get(path)
     out = _replace_xml_strings(blob, replacements) if replacements else blob
     if path == 'res/layout/dialog_fragment_frontpage_more.xml':
-        out = _hide_theme_option(out)
+        out = _hide_frontpage_legacy_rows(out)
     elif path == 'res/layout/dialog_fragment_theme.xml':
         out = _collapse_id_rows(out,THEME_DIALOG_COLLAPSE_IDS)
     return out
