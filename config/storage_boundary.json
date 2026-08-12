@@ -1,0 +1,63 @@
+{
+  "owned_contract": "com.runesheet.storage.CharacterStorage",
+  "cloud_storage_enabled": false,
+  "legacy_transition": {
+    "save": {
+      "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogNewSave;": [
+        "doLocalSave"
+      ],
+      "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogSave;": [
+        "simplerSaferSave"
+      ]
+    },
+    "load": {
+      "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogLoadNew;": [
+        "refreshData",
+        "deleteCharacter"
+      ]
+    },
+    "folders": {
+      "Lcom/redrazors/pathbuilder2e/filemanagement/filecomponents/FileManagementFolders;": [
+        "addCharacterToFolder",
+        "createFolder",
+        "deleteFolder",
+        "getAllFolderFiles",
+        "getFolderIDOfCharacter",
+        "removeCharacterFromFolder",
+        "setFolderName"
+      ]
+    },
+    "state": {
+      "Lcom/redrazors/pathbuilder2e/filemanagement/SavedStateFile;": [
+        "getCharacterData",
+        "getId",
+        "setCharacterData",
+        "setId"
+      ]
+    }
+  },
+  "isolated_cloud_runtime": {
+    "Lcom/redrazors/pathbuilder2e/filemanagement/CloudStorageHelper;": [
+      "saveFile",
+      "createFile",
+      "updateFile",
+      "deleteFile",
+      "getFileContents"
+    ],
+    "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogNewSave;": [
+      "doGDriveSave"
+    ],
+    "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogMoveFolder;": [
+      "copyToCloud"
+    ],
+    "Lcom/redrazors/pathbuilder2e/navigation/views/dialogs/DialogLoadNew;": [
+      "setCloudFiles"
+    ]
+  },
+  "migration_order": [
+    "save",
+    "load",
+    "folders",
+    "state"
+  ]
+}
