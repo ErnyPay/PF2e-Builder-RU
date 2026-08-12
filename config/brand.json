@@ -8,6 +8,8 @@
   "fixed_theme": "runesheet_antique",
   "theme_switching_enabled": false,
   "cloud_storage_enabled": false,
+  "dex_product_shell_enabled": false,
+  "dex_fixed_theme_enabled": false,
   "native_library_alignment": 16384,
   "base_apk_sha256": "ae96941d1d68153d96118582ae550b267b3008e7ded9c8a1357e1e54560a70fd",
   "base_apk_hint": "Pathbuilder2e_256_RU_DB76_round5_polished.apk"
