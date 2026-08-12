@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import struct
 
-from manifest_patch import _find_manifest_pool, _u32, _put_u32, build_string_pool
+from manifest_patch import _find_manifest_pool, _iter_start_elements, _u32, _put_u32, build_string_pool
 
 UTF8_FLAG = 0x100
+TYPE_REFERENCE = 0x01
+TYPE_DIMENSION = 0x05
+NO_INDEX = 0xFFFFFFFF
+THEME_OPTION_ID = 0x7F090119
 OLD_AD_APP_ID = 'ca-app-pub-8849615353397054~3022553003'
 OLD_BANNER_ID = 'ca-app-pub-8849615353397054/1681551174'
 TEST_AD_APP_ID = 'ca-app-pub-3940256099942544~3347511713'
@@ -29,7 +33,7 @@ LAYOUT_REPLACEMENTS = {
     'res/layout/dialog_fragment_frontpage_more.xml': {
         'App Options': 'Настройки RuneSheet', 'Custom Packs': 'Пользовательские наборы',
         'Database Management': 'Данные персонажей', 'Manage Campaigns': 'Кампании',
-        'Open Character by ID': 'Открыть по ID (совместимость)', 'Set App Theme': 'Оформление',
+        'Open Character by ID': 'Открыть по ID (совместимость)', 'Set App Theme': '',
     },
     'res/layout/dialog_fragment_options.xml': {
         'Options': 'Настройки RuneSheet', 'Standard Options': 'Основные', 'Advanced Options': 'Расширенные',
@@ -76,6 +80,38 @@ def _enc_len8_fixed(n: int, width: int) -> bytes:
         return bytes([n])
     if n > 0x7fff: raise ValueError('length too large')
     return bytes([0x80 | ((n >> 8) & 0x7f), n & 0xff])
+
+
+def _set_typed(out: bytearray, attr: int, dtype: int, data: int) -> None:
+    _put_u32(out, attr + 8, NO_INDEX)
+    struct.pack_into('<HBBI', out, attr + 12, 8, 0, dtype, data)
+
+
+def _hide_theme_option(blob: bytes) -> bytes:
+    """Keep the inherited view ID for runtime safety, but collapse it out of the UI.
+
+    The old dialog code still looks the theme row up by ID and may attach a click
+    listener. Physically removing the node risks a NullPointerException. A 0dp row
+    keeps the runtime contract while making theme selection unavailable to users.
+    """
+    pool = _find_manifest_pool(blob)
+    out = bytearray(blob)
+    found = False
+    for _, tag, attrs in _iter_start_elements(bytes(out), pool.strings):
+        if tag != 'LinearLayout':
+            continue
+        amap = {name:(a,raw,dtype,data) for a,name,raw,dtype,data in attrs}
+        ident = amap.get('id')
+        if not ident or ident[2] != TYPE_REFERENCE or ident[3] != THEME_OPTION_ID:
+            continue
+        for name in ('layout_height', 'padding', 'layout_marginTop'):
+            if name in amap:
+                _set_typed(out, amap[name][0], TYPE_DIMENSION, 0x00000001)  # 0dp
+        found = True
+        break
+    if not found:
+        raise ValueError('theme option row not found')
+    return bytes(out)
 
 
 def patch_arsc_owned_shell(blob: bytes) -> bytes:
@@ -132,4 +168,7 @@ def patch_manifest_owned_shell(blob: bytes) -> bytes:
 
 def patch_owned_shell_layout(path: str, blob: bytes) -> bytes:
     replacements = LAYOUT_REPLACEMENTS.get(path)
-    return _replace_xml_strings(blob, replacements) if replacements else blob
+    out = _replace_xml_strings(blob, replacements) if replacements else blob
+    if path == 'res/layout/dialog_fragment_frontpage_more.xml':
+        out = _hide_theme_option(out)
+    return out
