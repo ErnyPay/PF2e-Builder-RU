@@ -176,6 +176,19 @@ def patch_exact_strings(dex: bytes, replacements: dict[str, str]) -> bytes:
         d[off:off+cap] = new_item + b'\0'*(cap-len(new_item))
 
     strings=[s for _,_,_,s in strings_with_meta(bytes(d))[2]]
+    string_set=set(strings)
+    old_shell=set(PRODUCT_SHELL_REPLACEMENTS)
+    new_shell=set(PRODUCT_SHELL_REPLACEMENTS.values())
+    remaining=old_shell & string_set
+    missing_new=new_shell - string_set
+    missing_gameplay=set(PROTECTED_GAMEPLAY_DEX_LITERALS) - string_set
+    if remaining:
+        raise ValueError(f'legacy product shell DEX strings remain: {sorted(remaining)!r}')
+    if missing_new:
+        raise ValueError(f'RuneSheet product shell DEX strings missing: {sorted(missing_new)!r}')
+    if missing_gameplay:
+        raise ValueError(f'protected gameplay DEX strings changed or missing: {sorted(missing_gameplay)!r}')
+
     _force_fixed_theme_refs(d,strings)
 
     # Re-parse raw MUTF-8 and ensure string_ids remain strictly sorted as required by ART.
