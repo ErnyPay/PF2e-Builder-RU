@@ -3,15 +3,11 @@
   "cloud_storage_enabled": false,
   "owned_transition": {
     "save_policy": {
-      "enabled": true,
+      "enabled": false,
       "backend_replaced": false,
       "policy": "local-only",
-      "runtime_types": [
-        "Lcom/redrazors/pathbuilder2e/filemanagement/CoreRuneSheet;",
-        "Lcom/redrazors/pathbuilder2e/filemanagement/RuneSheetState;",
-        "Lcom/redrazors/pathbuilder2e/filemanagement/runesheet/CharacterStore;",
-        "Lcom/redrazors/pathbuilder2e/filemanagement/runesheet/FolderStore;"
-      ]
+      "status": "quarantined-after-device-launch-regression",
+      "runtime_types": []
     }
   },
   "legacy_transition": {
