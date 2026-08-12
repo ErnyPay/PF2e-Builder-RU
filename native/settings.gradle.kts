@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "PF2eBuilderRU"
 include(":app")
+include(":storage-core")
