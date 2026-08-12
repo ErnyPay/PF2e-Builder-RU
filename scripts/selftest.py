@@ -3,6 +3,7 @@ import json,re
 
 from dex_patch import PRODUCT_SHELL_REPLACEMENTS, PROTECTED_GAMEPLAY_DEX_LITERALS, _item
 from storage_boundary import load_storage_boundary, _pairs
+from storage_save_pass import OWNED_TYPE_RENAMES
 
 ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
@@ -26,8 +27,10 @@ assert cert=='e8e86e8c2beb58db4ca242a65ac9b970f0c9f736321ed1057814d64f7dfa7c90',
 assert cfg.get('fixed_theme')=='runesheet_antique', 'RuneSheet uses one fixed product theme'
 assert cfg.get('theme_switching_enabled') is False, 'theme switching must stay disabled'
 assert cfg.get('cloud_storage_enabled') is False, 'cloud storage must stay disabled until explicitly reintroduced'
-assert cfg.get('dex_product_shell_enabled') is False, 'unproven DEX product branding must stay disabled'
-assert cfg.get('dex_fixed_theme_enabled') is False, 'unproven DEX theme patch must stay disabled'
+assert cfg.get('dex_product_shell_enabled') is False, 'experimental DEX shell branding stays launch-safe/off'
+assert cfg.get('dex_fixed_theme_enabled') is False, 'experimental DEX theme bytecode stays launch-safe/off'
+assert cfg.get('storage_owned_save_policy_enabled') is True, 'owned local-save policy must stay enabled'
+assert cfg.get('storage_owned_backend_enabled') is False, 'legacy persistence backend is not yet replaced'
 assert cfg.get('native_library_alignment')==16384, 'stored native libraries must use 16K alignment'
 
 # Runtime shell strings stay inside their original string_data slots. Shorter
@@ -41,8 +44,8 @@ for old_text,new_text in PRODUCT_SHELL_REPLACEMENTS.items():
 assert not (set(PRODUCT_SHELL_REPLACEMENTS) & set(PROTECTED_GAMEPLAY_DEX_LITERALS)), 'gameplay literal leaked into product shell replacements'
 
 # Local persistence now has an explicit RuneSheet-owned API. The transition APK
-# may still delegate to the pinned legacy seam, but cloud methods are a separate
-# isolated boundary and must never be part of the local migration adapter.
+# still delegates SQL/serialization to the pinned compatibility backend, but
+# save policy itself is RuneSheet-owned and cloud operations are inert.
 assert storage_cfg['cloud_storage_enabled'] is False
 assert storage_cfg['cloud_storage_enabled'] == cfg['cloud_storage_enabled']
 assert storage_cfg['owned_contract'] == 'com.runesheet.storage.CharacterStorage'
@@ -51,6 +54,14 @@ assert contract_file.exists(), 'RuneSheet storage-core contract missing'
 contract_text=contract_file.read_text(encoding='utf8')
 assert 'package com.runesheet.storage;' in contract_text
 assert 'interface CharacterStorage' in contract_text
+
+owned_save=storage_cfg.get('owned_transition',{}).get('save_policy',{})
+assert owned_save.get('enabled') is True
+assert owned_save.get('backend_replaced') is False
+assert owned_save.get('policy') == 'local-only'
+assert set(owned_save.get('runtime_types',[])) <= set(OWNED_TYPE_RENAMES.values())
+assert (ROOT/'scripts/storage_save_pass.py').exists(), 'owned save pass missing'
+assert (ROOT/'build_runesheet.py').exists(), 'primary RuneSheet build entrypoint missing'
 
 local_pairs=set()
 for section in ('save','load','folders','state'):
@@ -61,4 +72,4 @@ assert cloud_pairs, 'cloud isolation seam is empty'
 assert not (local_pairs & cloud_pairs), 'cloud/local storage seam overlap'
 assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs), 'cloud helper leaked into local seam'
 
-print('configuration, release-line, no-cloud, launch-safe DEX, gameplay and storage-boundary guards: OK')
+print('configuration, release-line, no-cloud, launch-safe DEX, gameplay and owned-save storage guards: OK')
