@@ -7,8 +7,9 @@ import android.database.sqlite.SQLiteOpenHelper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.runesheet.storage.CharacterStorage
 
-class CharacterRepository(context: Context) {
+class CharacterRepository(context: Context) : CharacterStorage<CharacterRecord> {
     private val appContext = context.applicationContext
     private val database = CharacterDatabase(appContext)
     private val legacyPrefs = appContext.getSharedPreferences("characters-v1", Context.MODE_PRIVATE)
@@ -22,14 +23,16 @@ class CharacterRepository(context: Context) {
         refresh()
     }
 
-    fun create(draft: CharacterRecord): CharacterRecord {
+    override fun all(): List<CharacterRecord> = characters
+
+    override fun create(draft: CharacterRecord): CharacterRecord {
         val item = draft.normalized()
         upsert(item)
         refresh()
         return item
     }
 
-    fun update(item: CharacterRecord) {
+    override fun update(item: CharacterRecord) {
         upsert(item.normalized())
         refresh()
     }
@@ -39,7 +42,11 @@ class CharacterRepository(context: Context) {
         refresh()
     }
 
-    fun delete(id: String) {
+    override fun importCharacter(item: CharacterRecord) {
+        import(item)
+    }
+
+    override fun delete(id: String) {
         database.writableDatabase.delete(TABLE, "$COL_ID = ?", arrayOf(id))
         refresh()
     }
