@@ -1,0 +1,121 @@
+{
+  "release": "1.0.1-beta2",
+  "base": "1.0.1-beta1",
+  "version_code": 1004,
+  "policy": "content-only; exact DB/table/row/name with before-value guard; no DEX or resource mutation",
+  "counts": {
+    "master": 9,
+    "remaster": 16,
+    "total": 25,
+    "cumulative_since_1_0_0": 70
+  },
+  "sources": {
+    "pf2_ru": "verification/terminology only; no bulk copying",
+    "inventor_rules": "Guns & Gears / current errata cross-check when exact pf2.ru entity page is unavailable",
+    "item_binding": "same-row correct description plus wrong-donor detection inside remaster.db"
+  },
+  "patch_groups": [
+    {
+      "dbs": ["master.db", "remaster.db"],
+      "table": "specials_class_inventor",
+      "before_sha256": "04aafe1c8eee9fffe5b41de8c66eaa2058595578969ac0c3015ea1ee39f8b3a5",
+      "rows": [
+        {
+          "rowid": 3,
+          "name": "Explode",
+          "column": "text_descrip",
+          "replacement": "Вы намеренно выводите свою инновацию за пределы безопасного режима, заставляя её взорваться, не повреждая саму инновацию. Все существа в 5-футовой эманации вокруг вас, если вы носите или держите инновацию, либо вокруг инновации-миньона совершают простой спасбросок Рефлекса против 2d6 урона огнём. На 3-м уровне и на каждом последующем уровне урон увеличивается на 1d6. С Прорывной инновацией при использовании Взрыва можно выбрать эманацию 5 или 10 футов, а с Революционной инновацией — 5, 10 или 15 футов."
+        },
+        {
+          "rowid": 18,
+          "name": "Inventor Weapon Mastery",
+          "column": "text_descrip",
+          "replacement": "Вы полностью освоили своё оружие. Ваш уровень мастерства простого и воинского оружия, а также безоружных атак повышается до мастера."
+        }
+      ]
+    },
+    {
+      "dbs": ["master.db", "remaster.db"],
+      "table": "specials_class_inventor_offensive_boosts",
+      "before_sha256": "04aafe1c8eee9fffe5b41de8c66eaa2058595578969ac0c3015ea1ee39f8b3a5",
+      "column": "text_descrip",
+      "rows": {
+        "Chill (Cold)": "Ваша инновация быстро поглощает тепло, создавая сильный холод.",
+        "Ignition (Fire)": "Ваша инновация выпускает струи обжигающего пламени.",
+        "Jolt (Electricity)": "Ваша инновация поражает противников электрическими разрядами.",
+        "Momentum (Bludgeoning)": "Ваша инновация придаёт ударам дополнительный импульс.",
+        "Saws (Slashing)": "Во время атак ваша инновация выпускает вращающиеся пильные лезвия.",
+        "Spike (Piercing)": "Во время атак ваша инновация выпускает острые шипы.",
+        "Vitriol (Acid)": "Ваша инновация выбрасывает едкие брызги кислоты."
+      }
+    },
+    {
+      "db": "remaster.db",
+      "table": "specials_class_inventor",
+      "rowid": 9,
+      "name": "Reflex Expertise",
+      "column": "text_descrip",
+      "before_sha256": "4b23ae68d2aa8584242a6fc80c074fb849cc2876d09ff8078ad71dab002312e1",
+      "replacement": "Вы научились уклоняться от опасности. Ваше мастерство спасбросков Рефлекса улучшается до эксперта.",
+      "reason": "unrelated Defender armor sentence was appended"
+    },
+    {
+      "db": "remaster.db",
+      "table": "items_all",
+      "column": "action0desc",
+      "rows": [
+        {
+          "rowid": 640,
+          "name": "Animal Pheromones (Lesser)",
+          "before_sha256": "531c0954253896ba59d3099b226e82a81b962a9b243efbc64f18d696fc56fe39",
+          "replacement": "Активация: 1 минута (воздействие) + description of the same row",
+          "wrong_donor": "Everlasting Adhesive"
+        },
+        {
+          "rowid": 641,
+          "name": "Animal Pheromones (Moderate)",
+          "before_sha256": "531c0954253896ba59d3099b226e82a81b962a9b243efbc64f18d696fc56fe39",
+          "replacement": "Активация: 1 минута (воздействие) + description of the same row",
+          "wrong_donor": "Everlasting Adhesive"
+        },
+        {
+          "rowid": 642,
+          "name": "Animal Pheromones (Greater)",
+          "before_sha256": "531c0954253896ba59d3099b226e82a81b962a9b243efbc64f18d696fc56fe39",
+          "replacement": "Активация: 1 минута (воздействие) + description of the same row",
+          "wrong_donor": "Everlasting Adhesive"
+        },
+        {
+          "rowid": 1381,
+          "name": "Astonishing Ink (Minor)",
+          "before_sha256": "e20b61d8658ff05010a73162dbf2409a1fcee1ed2217d326cde0c27e64a11f67",
+          "replacement": "Активация: 10 минут (воздействие) + description of the same row",
+          "wrong_donor": "Euphorium"
+        },
+        {
+          "rowid": 1382,
+          "name": "Astonishing Ink (Moderate)",
+          "before_sha256": "e20b61d8658ff05010a73162dbf2409a1fcee1ed2217d326cde0c27e64a11f67",
+          "replacement": "Активация: 10 минут (воздействие) + description of the same row",
+          "wrong_donor": "Euphorium"
+        },
+        {
+          "rowid": 1383,
+          "name": "Astonishing Ink (Major)",
+          "before_sha256": "e20b61d8658ff05010a73162dbf2409a1fcee1ed2217d326cde0c27e64a11f67",
+          "replacement": "Активация: 10 минут (воздействие) + description of the same row",
+          "wrong_donor": "Euphorium"
+        }
+      ]
+    }
+  ],
+  "guards": {
+    "expected_changed_cells_master": 9,
+    "expected_changed_cells_remaster": 16,
+    "sqlite_integrity": "ok",
+    "foreign_key_violations": 0,
+    "sqlcipher_roundtrip_required": true,
+    "dex_must_match_1_0_0": true,
+    "non_content_payload_must_match_1_0_0": true
+  }
+}

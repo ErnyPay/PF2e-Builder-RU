@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pf2e-builder-ru.local/schema/catalog-v1.json",
+  "title": "PF2e Builder RU rules catalog v1",
+  "type": "object",
+  "required": ["schemaVersion", "catalogId", "provenance", "entities"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "catalogId": { "type": "string", "minLength": 1 },
+    "provenance": {
+      "type": "object",
+      "required": ["source", "license"],
+      "properties": {
+        "source": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "minLength": 1 },
+        "sourceUrl": { "type": "string" },
+        "attribution": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "name"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+          "type": {
+            "enum": ["ancestry", "background", "class", "feat", "spell", "equipment", "trait", "action", "condition", "rule"]
+          },
+          "name": {
+            "type": "object",
+            "required": ["ru"],
+            "properties": {
+              "ru": { "type": "string", "minLength": 1 },
+              "en": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "description": {
+            "type": "object",
+            "properties": {
+              "ru": { "type": "string" },
+              "en": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "level": { "type": "integer", "minimum": 0, "maximum": 30 },
+          "traits": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+          "sourceRef": { "type": "string" },
+          "data": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

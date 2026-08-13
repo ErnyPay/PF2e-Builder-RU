@@ -1,0 +1,97 @@
+# Roadmap
+
+## Product rule
+
+The product baseline is `Pathbuilder2e_256_RU_DB76_round5_polished`.
+
+We keep its working PF2e mechanics, calculations, rules dictionaries, Russian translations/descriptions and polished content databases intact. Product work changes the app around that content: identity, branding, UX, unwanted services and technical ownership layers.
+
+A feature is never removed just because we plan to replace its implementation later. Internal replacements are allowed only as verified 1:1 replacements.
+
+### Release-line rule
+
+RuneSheet has one transition-product update line:
+
+- package: `com.pf2ebuilder.ru.producty`;
+- signing certificate SHA-256: `e8e86e8c2beb58db4ca242a65ac9b970f0c9f736321ed1057814d64f7dfa7c90`;
+- one fixed `runesheet_antique` product theme; user theme switching is disabled;
+- new side-by-side packages are not a workaround for signing, manifest or installability problems;
+- stored native libraries are release-gated at 16K ZIP alignment before v2 signing.
+
+If the accepted private signing key is unavailable, no replacement APK is published until that update-line problem is resolved. The build must fail instead of silently creating a differently signed app.
+
+## 0.1 — Baseline protection and reproducibility
+
+- [x] deterministic polished base-APK fingerprint check;
+- [x] protected `assets/master.db` SHA-256 baseline;
+- [x] protected `assets/remaster.db` SHA-256 baseline;
+- [x] verify protected database hashes in produced transition APKs;
+- [x] v1/v2 signing and DEX verification tooling;
+- [x] lock the accepted Android package and signing-certificate fingerprint in build guards;
+- [x] verify 16K alignment of stored native libraries;
+- [ ] device smoke test of the next protected-content transition build;
+- [ ] recover/securely back up the accepted RuneSheet update signing key before the next distributed APK.
+
+Protected content hashes:
+
+- `assets/master.db`: `06f09830b2e578dd1ab01730537ec76b9b05e37a68902fe744a9f6c37b889b81`
+- `assets/remaster.db`: `8485608ddf46b3b5437bd8b051b2d47fa6118b0bfaa5187a59bdd3f831289f1d`
+
+## 0.2 — Make the existing app ours: identity and shell
+
+- [x] independent app name;
+- [x] stable RuneSheet application ID/local data directory;
+- [x] independent provider authorities;
+- [x] original launcher icon/logo generation;
+- [x] project-owned faceted action glyph generation;
+- [x] remove user-facing app-theme selection and keep one RuneSheet antique theme;
+- [ ] finish app name/About/splash/branding consistency across all screens;
+- [ ] remove remaining original-brand UI strings where they are not rules/content;
+- [ ] verify character creation, character sheet and existing content behave exactly like the polished baseline.
+
+## 0.3 — Detach inherited services without touching gameplay
+
+- [x] inventory Google/Firebase/ads/billing dependencies;
+- [x] disable inherited Ads/Measurement automatic Android components where safe;
+- [ ] isolate billing/cloud compatibility paths one dependency at a time;
+- [ ] stop claiming original application/store/deep-link identity where safe;
+- [ ] preserve all offline character-builder mechanics during service removal;
+- [ ] verify export/import/share flows after each service change;
+- [ ] keep third-party notices/licenses/attribution required by bundled content.
+
+## 0.4 — Own the UX incrementally
+
+- [ ] document current polished screens and navigation as regression reference;
+- [x] introduce the RuneSheet antique component system without changing rules text or calculations;
+- [x] migrate major dialogs, list rows and character-sheet runtime templates to project-owned rounded surfaces;
+- [ ] finish long-text geometry and information hierarchy across remaining screens;
+- [ ] replace visual elements screen-by-screen, not with a blank new builder;
+- [ ] keep information density and existing user workflows unless a deliberate UX task says otherwise;
+- [ ] device regression check after every substantial screen change.
+
+## 0.5 — Technical replacements only where useful
+
+- [ ] identify internal modules that actually need replacement;
+- [ ] define observable behavior/data contract before each replacement;
+- [ ] implement replacement behind the same user workflow;
+- [ ] compare outputs against the polished baseline;
+- [ ] remove old implementation only after parity is demonstrated.
+
+## Native research track (secondary)
+
+`native/` remains useful for experiments with project-owned Android code, storage and components. It is not the current product replacement and it does not own or replace the polished rules/translations databases.
+
+- [x] native Android proof-of-concept exists;
+- [x] independent native storage/JSON experiments exist;
+- [ ] reuse native components only when they can replace a real product component without losing behavior/content;
+- [ ] keep `rules/catalog` isolated from the polished product content unless a future explicit decision changes this rule.
+
+## 1.0 target
+
+- [ ] recognizable project-owned identity and UX;
+- [ ] polished rules/content preserved and regression-protected;
+- [ ] unwanted inherited online/commercial services removed or isolated where feasible;
+- [ ] stable character data/update path;
+- [ ] signed release/update workflow with protected secrets;
+- [ ] licenses/notices/provenance retained;
+- [ ] public distribution only after a separate rights/permission review.

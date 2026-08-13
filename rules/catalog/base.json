@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "pf2eru.project-base",
+  "provenance": {
+    "source": "PF2e Builder RU project-authored compatibility catalog",
+    "license": "Project-authored Russian summaries and compatibility metadata; see docs/LEGAL.md",
+    "notes": "Names are compatibility metadata. Descriptions in this file are short original summaries written for the project, not copied rulebook text."
+  },
+  "entities": [
+    {
+      "id": "ancestry.human",
+      "type": "ancestry",
+      "name": { "ru": "Человек", "en": "Human" },
+      "description": { "ru": "Гибкий и разнообразный народ. Хорошая отправная точка для персонажей самых разных культур, занятий и стилей игры." },
+      "data": { "catalogStage": "vertical-slice", "tagsRu": ["универсальность", "адаптивность"] }
+    },
+    {
+      "id": "ancestry.elf",
+      "type": "ancestry",
+      "name": { "ru": "Эльф", "en": "Elf" },
+      "description": { "ru": "Долгоживущий народ с сильными культурными традициями. В этом прототипе запись используется для проверки выбора, локализации и стабильного ID." },
+      "data": { "catalogStage": "vertical-slice", "tagsRu": ["долголетие", "традиции"] }
+    },
+    {
+      "id": "ancestry.dwarf",
+      "type": "ancestry",
+      "name": { "ru": "Дварф", "en": "Dwarf" },
+      "description": { "ru": "Стойкий народ с глубокими традициями ремесла и общинной памяти. Механические детали будут подключаться отдельным слоем правил." },
+      "data": { "catalogStage": "vertical-slice", "tagsRu": ["стойкость", "ремесло"] }
+    },
+    {
+      "id": "background.scholar",
+      "type": "background",
+      "name": { "ru": "Учёный", "en": "Scholar" },
+      "description": { "ru": "Персонаж посвятил значительную часть жизни учёбе, исследованиям и работе с источниками знаний." },
+      "data": { "catalogStage": "vertical-slice" }
+    },
+    {
+      "id": "background.artisan",
+      "type": "background",
+      "name": { "ru": "Ремесленник", "en": "Artisan" },
+      "description": { "ru": "Опыт практической работы сформировал привычку разбираться в материалах, инструментах и качестве изготовления." },
+      "data": { "catalogStage": "vertical-slice" }
+    },
+    {
+      "id": "background.guard",
+      "type": "background",
+      "name": { "ru": "Страж", "en": "Guard" },
+      "description": { "ru": "Служба научила персонажа сохранять внимание, действовать по обстановке и отвечать за безопасность других." },
+      "data": { "catalogStage": "vertical-slice" }
+    },
+    {
+      "id": "class.fighter",
+      "type": "class",
+      "name": { "ru": "Воин", "en": "Fighter" },
+      "description": { "ru": "Мастер оружия и боевой подготовки. В первом native-срезе класс уже хранится по стабильному ID; расчёты и классовые особенности подключатся следующим слоем." },
+      "data": { "catalogStage": "vertical-slice" }
+    },
+    {
+      "id": "class.wizard",
+      "type": "class",
+      "name": { "ru": "Волшебник", "en": "Wizard" },
+      "description": { "ru": "Подготовленный мистический заклинатель, опирающийся на изучение магии. Здесь пока проверяются локализация, выбор и сохранение." },
+      "data": { "catalogStage": "vertical-slice" }
+    },
+    {
+      "id": "class.cleric",
+      "type": "class",
+      "name": { "ru": "Жрец", "en": "Cleric" },
+      "description": { "ru": "Сакральный заклинатель, чьи возможности связаны с верой и божественной традицией. Полная механика появится в rules engine." },
+      "data": { "catalogStage": "vertical-slice" }
+    }
+  ]
+}

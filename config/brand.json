@@ -1,0 +1,21 @@
+{
+  "app_name": "RuneSheet RU",
+  "application_id": "com.pf2ebuilder.ru.producty",
+  "version_name": "1.0.0",
+  "version_code": 1002,
+  "file_provider_authority": "com.runesheet.producty.file.provider",
+  "expected_signing_cert_sha256": "0b780e6e9b38b3c05ad0e0af780b77a13700cfdfb767af2724942db4cf0b29f7",
+  "release_key_promoted_from_preview": true,
+  "release_baseline": "0.6.0-preview.5-dex-rollback",
+  "fixed_theme": "runesheet_antique",
+  "theme_switching_enabled": false,
+  "cloud_storage_enabled": false,
+  "legacy_external_actions_enabled": false,
+  "dex_product_shell_enabled": false,
+  "dex_fixed_theme_enabled": false,
+  "storage_owned_save_policy_enabled": false,
+  "storage_owned_backend_enabled": false,
+  "native_library_alignment": 16384,
+  "base_apk_sha256": "ae96941d1d68153d96118582ae550b267b3008e7ded9c8a1357e1e54560a70fd",
+  "base_apk_hint": "Pathbuilder2e_256_RU_DB76_round5_polished.apk"
+}
