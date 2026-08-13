@@ -9,6 +9,7 @@ ROOT=Path(__file__).resolve().parents[1]
 cfg=json.loads((ROOT/'config/brand.json').read_text(encoding='utf8'))
 storage_cfg=load_storage_boundary()
 release_baseline=json.loads((ROOT/'config/release_baseline.json').read_text(encoding='utf8'))
+content_beta=json.loads((ROOT/'config/content_release_1_0_1_beta1.json').read_text(encoding='utf8'))
 old='com.redrazors.pathbuilder2e'
 
 assert cfg['application_id']=='com.pf2ebuilder.ru.producty', 'RuneSheet update package is locked'
@@ -53,6 +54,28 @@ assert 'res/menu/activity_main_drawer_icons.xml' in RELEASE_LAYOUT_PATHS
 assert (ROOT/'scripts/release_hardening.py').exists()
 assert (ROOT/'build_runesheet.py').exists()
 
+# Translation work is a separate content-only beta line. Stable brand/release
+# identity remains 1.0.0 while this manifest records the guarded DB patch.
+assert content_beta['release']=='1.0.1-beta1'
+assert content_beta['stable_parent']=='1.0.0'
+assert content_beta['content_only'] is True
+assert content_beta['expected_changed_cells']==45
+assert content_beta['master_changed_cells']==37
+assert content_beta['remaster_changed_cells']==8
+assert content_beta['categories']=={
+    'misbound_class_feature_descriptions':34,
+    'mixed_en_ru_energy_resistant_runes':8,
+    'mixed_en_ru_magentic_suit':3,
+}
+assert content_beta['source_databases']['master_encrypted_sha256']=='06f09830b2e578dd1ab01730537ec76b9b05e37a68902fe744a9f6c37b889b81'
+assert content_beta['source_databases']['remaster_encrypted_sha256']=='8485608ddf46b3b5437bd8b051b2d47fa6118b0bfaa5187a59bdd3f831289f1d'
+assert re.fullmatch(r'[0-9a-f]{64}',content_beta['source_databases']['master_plaintext_sha256'])
+assert re.fullmatch(r'[0-9a-f]{64}',content_beta['source_databases']['remaster_plaintext_sha256'])
+assert content_beta['runtime_policy']['dex_must_match_stable_1_0_0'] is True
+assert content_beta['runtime_policy']['resources_must_match_stable_1_0_0'] is True
+assert content_beta['runtime_policy']['gameplay_ids_names_levels_traits_unchanged'] is True
+assert (ROOT/'scripts/content_patch_1_0_1_beta1.py').exists()
+
 assert storage_cfg['cloud_storage_enabled'] is False
 assert storage_cfg['cloud_storage_enabled'] == cfg['cloud_storage_enabled']
 assert storage_cfg['owned_contract'] == 'com.runesheet.storage.CharacterStorage'
@@ -77,4 +100,4 @@ assert cloud_pairs
 assert not (local_pairs & cloud_pairs)
 assert all('CloudStorageHelper' not in cls for cls,_ in local_pairs)
 
-print('1.0.0 identity, permanent signing key, RC2 hardening, no-cloud, launch-safe DEX and storage guards: OK')
+print('1.0.0 identity, permanent signing key, RC2 hardening, no-cloud, launch-safe DEX, storage guards and 1.0.1 beta1 content patch manifest: OK')
