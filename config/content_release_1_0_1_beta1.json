@@ -1,0 +1,24 @@
+{
+  "release": "1.0.1-beta1",
+  "stable_parent": "1.0.0",
+  "content_only": true,
+  "source_databases": {
+    "master_encrypted_sha256": "06f09830b2e578dd1ab01730537ec76b9b05e37a68902fe744a9f6c37b889b81",
+    "remaster_encrypted_sha256": "8485608ddf46b3b5437bd8b051b2d47fa6118b0bfaa5187a59bdd3f831289f1d",
+    "master_plaintext_sha256": "86389697253f2046a09ac266ca1a78ac6f3fc2653c8ccb6fb8a5c9284e28efc9",
+    "remaster_plaintext_sha256": "bebaf99cfe5a6503681b2876a8c963af9dcb779c4232312ebeb8c75438eaf16e"
+  },
+  "expected_changed_cells": 45,
+  "master_changed_cells": 37,
+  "remaster_changed_cells": 8,
+  "categories": {
+    "misbound_class_feature_descriptions": 34,
+    "mixed_en_ru_energy_resistant_runes": 8,
+    "mixed_en_ru_magentic_suit": 3
+  },
+  "runtime_policy": {
+    "dex_must_match_stable_1_0_0": true,
+    "resources_must_match_stable_1_0_0": true,
+    "gameplay_ids_names_levels_traits_unchanged": true
+  }
+}
