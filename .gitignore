@@ -1,0 +1,34 @@
+# Local APK/XAPK inputs and generated outputs
+*.apk
+*.xapk
+*.apks
+*.aab
+*.keystore
+*.jks
+*.p12
+*.pem
+*.key
+
+# Decompiled / extracted binaries
+work/
+build/
+dist/
+inputs/
+outputs/
+*.dex
+*.arsc
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Secrets
+.env
+.env.*
