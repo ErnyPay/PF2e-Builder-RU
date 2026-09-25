@@ -1,4 +1,4 @@
-# PF2e Builder RU / RuneSheet modernization
+# PF2eRUS / RuneSheet modernization
 
 ## Goal
 Maintain a reproducible Russian-localized Android build based on the user's working RuneSheet experience while tracking current Pathbuilder 2e data/runtime compatibility.

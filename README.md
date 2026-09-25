@@ -1,4 +1,4 @@
-# PF2e Builder RU
+# PF2eRUS
 
 Независимый русскоязычный проект-конструктор персонажей для правил PF2e.
 
@@ -6,8 +6,8 @@
 
 ## Что уже есть
 
-- отдельное имя приложения: **PF2e Builder RU**;
-- отдельный Android application ID: `com.pf2ebuilder.ru.builderx`;
+- отдельное имя приложения: **PF2eRUS**;
+- отдельный Android application ID: `com.pf2erus.app`;
 - отдельное хранилище приложения и путь базы данных;
 - отдельные provider authorities, чтобы сборка могла устанавливаться рядом с оригинальным приложением;
 - собственные launcher icons и логотипы, генерируемые во время сборки;
@@ -60,7 +60,7 @@ MIT-лицензия в этом репозитории относится **т�
 
 ## Проект
 
-- Имя: **PF2e Builder RU**
-- Android application ID: `com.pf2ebuilder.ru.builderx`
+- Имя: **PF2eRUS**
+- Android application ID: `com.pf2erus.app`
 - Текущая версия: `0.1.0-alpha.1`
 - Канал: alpha / sideload
