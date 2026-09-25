@@ -10,6 +10,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,14 +41,28 @@ data class Character(val name: String, val level: String, val ancestry: String, 
 }
 
 @Composable private fun CharactersScreen(items: List<Character>, create: () -> Unit, back: () -> Unit) {
+    val selected = remember { mutableStateOf<Character?>(null) }
+    if (selected.value != null) { CharacterSheet(selected.value!!, { selected.value = null }); return }
     Column(Modifier.fillMaxSize().padding(24.dp)) {
         Text("Персонажи", style = MaterialTheme.typography.headlineMedium, color = Color.White)
         Spacer(Modifier.height(16.dp))
         if (items.isEmpty()) Text("Персонажей пока нет", color = Color.LightGray)
-        items.forEach { character -> Card(Modifier.fillMaxWidth().padding(vertical = 5.dp)) { Column(Modifier.padding(16.dp)) { Text(character.name); Text("${character.ancestry} · ${character.heroClass} · уровень ${character.level}") } } }
+        items.forEach { character -> Card(Modifier.fillMaxWidth().padding(vertical = 5.dp).clickable { selected.value = character }, colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(16.dp)) { Text(character.name, style = MaterialTheme.typography.titleLarge); Text("${character.ancestry} · ${character.heroClass} · уровень ${character.level}", color = Color(0xFFB9D9EA)) } } }
         Spacer(Modifier.height(16.dp))
         Button(onClick = create, modifier = Modifier.fillMaxWidth()) { Text("Создать персонажа") }
         OutlinedButton(onClick = back) { Text("Назад") }
+    }
+}
+
+@Composable private fun CharacterSheet(character: Character, back: () -> Unit) {
+    val tabs = listOf("Обзор", "Характеристики", "Навыки", "Инвентарь")
+    val selected = remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize().padding(20.dp)) {
+        Text(character.name, style = MaterialTheme.typography.headlineMedium, color = Color(0xFFE8F6FF))
+        Text("${character.ancestry} · ${character.heroClass} · уровень ${character.level}", color = Color(0xFFB9D9EA))
+        Spacer(Modifier.height(16.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { tabs.forEachIndexed { i, tab -> FilterChip(selected.value == i, { selected.value = i }, label = { Text(tab) }) } }
+        Spacer(Modifier.height(18.dp)); Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(18.dp)) { Text(tabs[selected.value], style = MaterialTheme.typography.titleLarge); Text("Раздел персонажа будет заполнен данными PF2e", color = Color(0xFFB9D9EA)) } }
+        Spacer(Modifier.height(16.dp)); OutlinedButton(onClick = back) { Text("Назад к персонажам") }
     }
 }
 
