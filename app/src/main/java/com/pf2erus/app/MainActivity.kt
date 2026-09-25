@@ -34,9 +34,19 @@ data class Character(val name: String, val level: String, val ancestry: String, 
                 "characters" -> CharactersScreen(characters, { screen.value = "create" }, { screen.value = "home" })
                 "create" -> CreateScreen({ character -> characters.add(character); screen.value = "characters" }, { screen.value = "home" })
                 "library" -> LibraryScreen { screen.value = "home" }
-                else -> SectionScreen("Настройки", "Язык, тема и параметры приложения") { screen.value = "home" }
+                else -> SettingsScreen { screen.value = "home" }
             }
         }
+    }
+}
+
+@Composable private fun SettingsScreen(back: () -> Unit) {
+    val dark = remember { mutableStateOf(true) }
+    Column(Modifier.fillMaxSize().padding(20.dp)) {
+        Text("Настройки", style = MaterialTheme.typography.headlineMedium, color = Color(0xFFE8F6FF)); Spacer(Modifier.height(18.dp))
+        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(16.dp)) { Text("Оформление", style = MaterialTheme.typography.titleLarge); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text("Тёмная тема"); Switch(dark.value, { dark.value = it }) } } }
+        Spacer(Modifier.height(12.dp)); Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(16.dp)) { Text("Данные", style = MaterialTheme.typography.titleLarge); Text("Импорт и экспорт персонажей", color = Color(0xFFB9D9EA)); Spacer(Modifier.height(10.dp)); OutlinedButton(onClick = {}) { Text("Импортировать") }; OutlinedButton(onClick = {}) { Text("Экспортировать") } } }
+        Spacer(Modifier.height(16.dp)); OutlinedButton(onClick = back) { Text("Назад") }
     }
 }
 
@@ -51,18 +61,6 @@ data class Character(val name: String, val level: String, val ancestry: String, 
         Spacer(Modifier.height(16.dp))
         Button(onClick = create, modifier = Modifier.fillMaxWidth()) { Text("Создать персонажа") }
         OutlinedButton(onClick = back) { Text("Назад") }
-    }
-}
-
-@Composable private fun CharacterSheet(character: Character, back: () -> Unit) {
-    val tabs = listOf("Обзор", "Характеристики", "Навыки", "Инвентарь")
-    val selected = remember { mutableStateOf(0) }
-    Column(Modifier.fillMaxSize().padding(20.dp)) {
-        Text(character.name, style = MaterialTheme.typography.headlineMedium, color = Color(0xFFE8F6FF))
-        Text("${character.ancestry} · ${character.heroClass} · уровень ${character.level}", color = Color(0xFFB9D9EA))
-        Spacer(Modifier.height(16.dp)); Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) { tabs.forEachIndexed { i, tab -> FilterChip(selected.value == i, { selected.value = i }, label = { Text(tab) }) } }
-        Spacer(Modifier.height(18.dp)); Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(18.dp)) { Text(tabs[selected.value], style = MaterialTheme.typography.titleLarge); Text("Раздел персонажа будет заполнен данными PF2e", color = Color(0xFFB9D9EA)) } }
-        Spacer(Modifier.height(16.dp)); OutlinedButton(onClick = back) { Text("Назад к персонажам") }
     }
 }
 
@@ -141,3 +139,4 @@ data class Character(val name: String, val level: String, val ancestry: String, 
         Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = back) { Text("Назад") }
     }
 }
+
