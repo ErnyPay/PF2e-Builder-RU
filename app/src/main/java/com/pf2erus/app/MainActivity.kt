@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
@@ -13,21 +14,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 class MainActivity : ComponentActivity() { override fun onCreate(state: Bundle?) { super.onCreate(state); setContent { App() } } }
+data class Character(val name: String, val level: String, val ancestry: String, val heroClass: String)
 @Composable fun App() {
     MaterialTheme(colorScheme = darkColorScheme()) {
         Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF121212)) {
             val screen = remember { mutableStateOf("home") }
+            val characters = remember { mutableStateListOf<Character>() }
             when (screen.value) {
                 "home" -> HomeScreen { screen.value = it }
-                "characters" -> SectionScreen("Персонажи", "Здесь будут сохранённые персонажи") { screen.value = "home" }
-                "create" -> CreateScreen { screen.value = "home" }
+                "characters" -> CharactersScreen(characters, { screen.value = "create" }, { screen.value = "home" })
+                "create" -> CreateScreen({ character -> characters.add(character); screen.value = "characters" }, { screen.value = "home" })
                 else -> SectionScreen("Настройки", "Язык, тема и параметры приложения") { screen.value = "home" }
             }
         }
     }
 }
 
-@Composable private fun CreateScreen(back: () -> Unit) {
+@Composable private fun CharactersScreen(items: List<Character>, create: () -> Unit, back: () -> Unit) {
+    Column(Modifier.fillMaxSize().padding(24.dp)) {
+        Text("Персонажи", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+        Spacer(Modifier.height(16.dp))
+        if (items.isEmpty()) Text("Персонажей пока нет", color = Color.LightGray)
+        items.forEach { character -> Card(Modifier.fillMaxWidth().padding(vertical = 5.dp)) { Column(Modifier.padding(16.dp)) { Text(character.name); Text("${character.ancestry} · ${character.heroClass} · уровень ${character.level}") } } }
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = create, modifier = Modifier.fillMaxWidth()) { Text("Создать персонажа") }
+        OutlinedButton(onClick = back) { Text("Назад") }
+    }
+}
+
+@Composable private fun CreateScreen(save: (Character) -> Unit, back: () -> Unit) {
     val name = remember { mutableStateOf("") }
     val level = remember { mutableStateOf("1") }
     val ancestry = remember { mutableStateOf("Человек") }
@@ -43,7 +58,7 @@ class MainActivity : ComponentActivity() { override fun onCreate(state: Bundle?)
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(heroClass.value, { heroClass.value = it }, label = { Text("Класс") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Spacer(Modifier.height(18.dp))
-        Button(onClick = back, modifier = Modifier.fillMaxWidth(), enabled = name.value.isNotBlank()) { Text("Сохранить персонажа") }
+        Button(onClick = { save(Character(name.value, level.value, ancestry.value, heroClass.value)) }, modifier = Modifier.fillMaxWidth(), enabled = name.value.isNotBlank()) { Text("Сохранить персонажа") }
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = back) { Text("Отмена") }
     }
