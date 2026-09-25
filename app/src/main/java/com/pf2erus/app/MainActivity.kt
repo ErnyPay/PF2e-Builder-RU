@@ -10,6 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 class MainActivity : ComponentActivity() { override fun onCreate(state: Bundle?) { super.onCreate(state); setContent { App() } } }
 @Composable fun App() {
     MaterialTheme(colorScheme = darkColorScheme()) {
@@ -18,10 +20,32 @@ class MainActivity : ComponentActivity() { override fun onCreate(state: Bundle?)
             when (screen.value) {
                 "home" -> HomeScreen { screen.value = it }
                 "characters" -> SectionScreen("Персонажи", "Здесь будут сохранённые персонажи") { screen.value = "home" }
-                "create" -> SectionScreen("Создать персонажа", "Выбор ancestry, класса и характеристик") { screen.value = "home" }
+                "create" -> CreateScreen { screen.value = "home" }
                 else -> SectionScreen("Настройки", "Язык, тема и параметры приложения") { screen.value = "home" }
             }
         }
+    }
+}
+
+@Composable private fun CreateScreen(back: () -> Unit) {
+    val name = remember { mutableStateOf("") }
+    val level = remember { mutableStateOf("1") }
+    val ancestry = remember { mutableStateOf("Человек") }
+    val heroClass = remember { mutableStateOf("Воин") }
+    Column(Modifier.fillMaxSize().padding(24.dp)) {
+        Text("Новый персонаж", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+        Spacer(Modifier.height(16.dp))
+        OutlinedTextField(name.value, { name.value = it }, label = { Text("Имя") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(level.value, { level.value = it.filter(Char::isDigit) }, label = { Text("Уровень") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(ancestry.value, { ancestry.value = it }, label = { Text("Происхождение") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(heroClass.value, { heroClass.value = it }, label = { Text("Класс") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Spacer(Modifier.height(18.dp))
+        Button(onClick = back, modifier = Modifier.fillMaxWidth(), enabled = name.value.isNotBlank()) { Text("Сохранить персонажа") }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = back) { Text("Отмена") }
     }
 }
 
