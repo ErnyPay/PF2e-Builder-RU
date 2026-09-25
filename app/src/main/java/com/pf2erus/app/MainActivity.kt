@@ -84,18 +84,23 @@ data class Character(val name: String, val level: String, val ancestry: String, 
 }
 
 @Composable private fun HomeScreen(open: (String) -> Unit) {
-    Scaffold(bottomBar = { NavigationBar { NavigationBarItem(true, { }, icon = { Text("♙") }, label = { Text("Персонажи") }); NavigationBarItem(false, { open("library") }, icon = { Text("✦") }, label = { Text("Библиотека") }); NavigationBarItem(false, { open("settings") }, icon = { Text("⚙") }, label = { Text("Настройки") }) } }) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
-            Text("2eRUS", style = MaterialTheme.typography.headlineLarge, color = Color(0xFFE8F6FF))
-            Text("PF2e Character Builder", color = Color(0xFFB9D9EA))
-            Spacer(Modifier.height(24.dp))
-            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF163A59))) { Column(Modifier.padding(18.dp)) { Text("Мои персонажи", style = MaterialTheme.typography.titleLarge); Text("Создайте первого героя", color = Color(0xFFB9D9EA)); Spacer(Modifier.height(14.dp)); Button(onClick = { open("create") }) { Text("Создать персонажа") } } }
-            Spacer(Modifier.height(16.dp))
-            Text("Быстрый доступ", style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { open("characters") }, modifier = Modifier.fillMaxWidth()) { Text("Открыть список персонажей") }
-        }
+    val dark = remember { mutableStateOf(true) }
+    Column(Modifier.fillMaxSize().padding(22.dp)) {
+        Spacer(Modifier.height(18.dp))
+        Button(onClick = {}, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF28547A))) { Text("2eRUS", style = MaterialTheme.typography.titleLarge) }
+        Spacer(Modifier.height(34.dp))
+        HomeCard("НОВЫЙ ПЕРСОНАЖ", "Начать сборку героя", "СОЗДАТЬ") { open("create") }
+        Spacer(Modifier.height(20.dp))
+        HomeCard("МОИ ПЕРСОНАЖИ", "Продолжить или импортировать", "ОТКРЫТЬ") { open("characters") }
+        Spacer(Modifier.height(20.dp))
+        OutlinedButton(onClick = { open("settings") }, modifier = Modifier.fillMaxWidth()) { Text("Ещё") }
+        Spacer(Modifier.height(28.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Switch(checked = dark.value, onCheckedChange = { dark.value = it }); Spacer(Modifier.width(8.dp)); Text("Тёмная тема") }
     }
+}
+
+@Composable private fun HomeCard(title: String, subtitle: String, action: String, onClick: () -> Unit) {
+    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(22.dp)) { Text(title, style = MaterialTheme.typography.headlineSmall, color = Color(0xFFE8F6FF)); Spacer(Modifier.height(10.dp)); Text(subtitle, color = Color(0xFFB9D9EA)); Spacer(Modifier.height(14.dp)); Button(onClick = onClick) { Text(action) } } }
 }
 
 @Composable private fun SectionScreen(title: String, subtitle: String, back: () -> Unit) {
