@@ -32,6 +32,7 @@ data class Character(val name: String, val level: String, val ancestry: String, 
                 "home" -> HomeScreen { screen.value = it }
                 "characters" -> CharactersScreen(characters, { screen.value = "create" }, { screen.value = "home" })
                 "create" -> CreateScreen({ character -> characters.add(character); screen.value = "characters" }, { screen.value = "home" })
+                "library" -> SectionScreen("Библиотека", "Классы, ancestry, навыки, заклинания и предметы") { screen.value = "home" }
                 else -> SectionScreen("Настройки", "Язык, тема и параметры приложения") { screen.value = "home" }
             }
         }
@@ -83,7 +84,7 @@ data class Character(val name: String, val level: String, val ancestry: String, 
 }
 
 @Composable private fun HomeScreen(open: (String) -> Unit) {
-    Scaffold(bottomBar = { NavigationBar { NavigationBarItem(true, { }, icon = { Text("♙") }, label = { Text("Персонажи") }); NavigationBarItem(false, { }, icon = { Text("✦") }, label = { Text("Библиотека") }); NavigationBarItem(false, { open("settings") }, icon = { Text("⚙") }, label = { Text("Настройки") }) } }) { padding ->
+    Scaffold(bottomBar = { NavigationBar { NavigationBarItem(true, { }, icon = { Text("♙") }, label = { Text("Персонажи") }); NavigationBarItem(false, { open("library") }, icon = { Text("✦") }, label = { Text("Библиотека") }); NavigationBarItem(false, { open("settings") }, icon = { Text("⚙") }, label = { Text("Настройки") }) } }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
             Text("2eRUS", style = MaterialTheme.typography.headlineLarge, color = Color(0xFFE8F6FF))
             Text("PF2e Character Builder", color = Color(0xFFB9D9EA))
