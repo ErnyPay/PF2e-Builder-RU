@@ -32,7 +32,7 @@ data class Character(val name: String, val level: String, val ancestry: String, 
                 "home" -> HomeScreen { screen.value = it }
                 "characters" -> CharactersScreen(characters, { screen.value = "create" }, { screen.value = "home" })
                 "create" -> CreateScreen({ character -> characters.add(character); screen.value = "characters" }, { screen.value = "home" })
-                "library" -> SectionScreen("Библиотека", "Классы, ancestry, навыки, заклинания и предметы") { screen.value = "home" }
+                "library" -> LibraryScreen { screen.value = "home" }
                 else -> SectionScreen("Настройки", "Язык, тема и параметры приложения") { screen.value = "home" }
             }
         }
@@ -110,5 +110,19 @@ data class Character(val name: String, val level: String, val ancestry: String, 
         Text(subtitle, color = Color.LightGray)
         Spacer(Modifier.height(24.dp))
         OutlinedButton(onClick = back) { Text("Назад") }
+    }
+}
+
+@Composable private fun LibraryScreen(back: () -> Unit) {
+    val tabs = listOf("Классы", "Происхождения", "Навыки", "Заклинания", "Предметы")
+    val selected = remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize().padding(20.dp)) {
+        Text("Библиотека", style = MaterialTheme.typography.headlineMedium, color = Color(0xFFE8F6FF))
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) { tabs.forEachIndexed { i, tab -> FilterChip(selected.value == i, { selected.value = i }, label = { Text(tab) }) } }
+        Spacer(Modifier.height(18.dp))
+        val entries = when (selected.value) { 0 -> listOf("Воин", "Волшебник", "Плут", "Жрец"); 1 -> listOf("Человек", "Эльф", "Дворф", "Гном"); 2 -> listOf("Акробатика", "Атлетика", "Медицина", "Скрытность"); 3 -> listOf("Искра", "Щит", "Лечебное заклинание", "Огненный шар"); else -> listOf("Длинный меч", "Кожаная броня", "Зелье лечения", "Рюкзак") }
+        entries.forEach { entry -> Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFF123552))) { Column(Modifier.padding(14.dp)) { Text(entry, style = MaterialTheme.typography.titleMedium); Text("Описание будет добавлено на этапе библиотек", color = Color(0xFFB9D9EA)) } } }
+        Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = back) { Text("Назад") }
     }
 }
