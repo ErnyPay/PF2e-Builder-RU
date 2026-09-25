@@ -83,15 +83,17 @@ data class Character(val name: String, val level: String, val ancestry: String, 
 }
 
 @Composable private fun HomeScreen(open: (String) -> Unit) {
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("2eRUS", style = MaterialTheme.typography.displayMedium, color = Color(0xFFE8F6FF))
-        Text("Конструктор персонажей PF2e", color = Color(0xFFB9D9EA))
-        Spacer(Modifier.height(28.dp))
-        Button(onClick = { open("characters") }, modifier = Modifier.fillMaxWidth()) { Text("Персонажи") }
-        Spacer(Modifier.height(10.dp))
-        Button(onClick = { open("create") }, modifier = Modifier.fillMaxWidth()) { Text("Создать персонажа") }
-        Spacer(Modifier.height(10.dp))
-        OutlinedButton(onClick = { open("settings") }, modifier = Modifier.fillMaxWidth()) { Text("Настройки") }
+    Scaffold(bottomBar = { NavigationBar { NavigationBarItem(true, { }, icon = { Text("♙") }, label = { Text("Персонажи") }); NavigationBarItem(false, { }, icon = { Text("✦") }, label = { Text("Библиотека") }); NavigationBarItem(false, { open("settings") }, icon = { Text("⚙") }, label = { Text("Настройки") }) } }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).padding(20.dp)) {
+            Text("2eRUS", style = MaterialTheme.typography.headlineLarge, color = Color(0xFFE8F6FF))
+            Text("PF2e Character Builder", color = Color(0xFFB9D9EA))
+            Spacer(Modifier.height(24.dp))
+            Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFF163A59))) { Column(Modifier.padding(18.dp)) { Text("Мои персонажи", style = MaterialTheme.typography.titleLarge); Text("Создайте первого героя", color = Color(0xFFB9D9EA)); Spacer(Modifier.height(14.dp)); Button(onClick = { open("create") }) { Text("Создать персонажа") } } }
+            Spacer(Modifier.height(16.dp))
+            Text("Быстрый доступ", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { open("characters") }, modifier = Modifier.fillMaxWidth()) { Text("Открыть список персонажей") }
+        }
     }
 }
 
