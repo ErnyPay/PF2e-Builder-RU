@@ -16,8 +16,16 @@ import androidx.compose.ui.text.input.KeyboardType
 class MainActivity : ComponentActivity() { override fun onCreate(state: Bundle?) { super.onCreate(state); setContent { App() } } }
 data class Character(val name: String, val level: String, val ancestry: String, val heroClass: String)
 @Composable fun App() {
-    MaterialTheme(colorScheme = darkColorScheme()) {
-        Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF121212)) {
+    val winter = darkColorScheme(
+        primary = Color(0xFF8ED8FF),
+        onPrimary = Color(0xFF003548),
+        secondary = Color(0xFFB9E7FF),
+        background = Color(0xFF071A2B),
+        surface = Color(0xFF102B43),
+        onSurface = Color(0xFFE8F6FF)
+    )
+    MaterialTheme(colorScheme = winter) {
+        Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF071A2B)) {
             val screen = remember { mutableStateOf("home") }
             val characters = remember { mutableStateListOf<Character>() }
             when (screen.value) {
@@ -66,8 +74,8 @@ data class Character(val name: String, val level: String, val ancestry: String, 
 
 @Composable private fun HomeScreen(open: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center) {
-        Text("2eRUS", style = MaterialTheme.typography.displayMedium, color = Color.White)
-        Text("Конструктор персонажей PF2e", color = Color.LightGray)
+        Text("2eRUS", style = MaterialTheme.typography.displayMedium, color = Color(0xFFE8F6FF))
+        Text("Конструктор персонажей PF2e", color = Color(0xFFB9D9EA))
         Spacer(Modifier.height(28.dp))
         Button(onClick = { open("characters") }, modifier = Modifier.fillMaxWidth()) { Text("Персонажи") }
         Spacer(Modifier.height(10.dp))
