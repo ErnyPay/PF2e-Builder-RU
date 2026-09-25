@@ -55,6 +55,10 @@ data class Character(val name: String, val level: String, val ancestry: String, 
     val level = remember { mutableStateOf("1") }
     val ancestry = remember { mutableStateOf("Человек") }
     val heroClass = remember { mutableStateOf("Воин") }
+    val ancestryOpen = remember { mutableStateOf(false) }
+    val classOpen = remember { mutableStateOf(false) }
+    val ancestries = listOf("Человек", "Эльф", "Дворф", "Гном", "Полурослик")
+    val classes = listOf("Воин", "Волшебник", "Плут", "Жрец", "Рейнджер")
     Column(Modifier.fillMaxSize().padding(24.dp)) {
         Text("Новый персонаж", style = MaterialTheme.typography.headlineMedium, color = Color.White)
         Spacer(Modifier.height(16.dp))
@@ -62,9 +66,15 @@ data class Character(val name: String, val level: String, val ancestry: String, 
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(level.value, { level.value = it.filter(Char::isDigit) }, label = { Text("Уровень") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(ancestry.value, { ancestry.value = it }, label = { Text("Происхождение") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Box {
+            OutlinedButton(onClick = { ancestryOpen.value = true }, modifier = Modifier.fillMaxWidth()) { Text("Происхождение: ${ancestry.value}") }
+            DropdownMenu(expanded = ancestryOpen.value, onDismissRequest = { ancestryOpen.value = false }) { ancestries.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { ancestry.value = item; ancestryOpen.value = false }) } }
+        }
         Spacer(Modifier.height(10.dp))
-        OutlinedTextField(heroClass.value, { heroClass.value = it }, label = { Text("Класс") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        Box {
+            OutlinedButton(onClick = { classOpen.value = true }, modifier = Modifier.fillMaxWidth()) { Text("Класс: ${heroClass.value}") }
+            DropdownMenu(expanded = classOpen.value, onDismissRequest = { classOpen.value = false }) { classes.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { heroClass.value = item; classOpen.value = false }) } }
+        }
         Spacer(Modifier.height(18.dp))
         Button(onClick = { save(Character(name.value, level.value, ancestry.value, heroClass.value)) }, modifier = Modifier.fillMaxWidth(), enabled = name.value.isNotBlank()) { Text("Сохранить персонажа") }
         Spacer(Modifier.height(8.dp))
