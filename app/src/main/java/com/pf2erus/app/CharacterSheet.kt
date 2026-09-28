@@ -57,12 +57,12 @@ import androidx.compose.ui.unit.dp
                         EditorHeading("Уровень ${character.level}")
                         EditorField("Опыт", fields["Опыт"] ?: "0") { edit("Опыт") }
                         EditorField("Очки героя", fields["Очки героя"] ?: "1") { edit("Очки героя") }
-                        Row(Modifier.fillMaxWidth()) { listOf("Размер", "Скорость").forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "—") { edit(label) } } }
-                        listOf(listOf("Сила", "Ловкость"), listOf("Телосложение", "Интеллект"), listOf("Мудрость", "Харизма")).forEach { pair -> Row { pair.forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "—") { edit(label) } } } }
+                        Row(Modifier.fillMaxWidth()) { listOf("Размер", "Скорость").forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "—") { edit(label) } } } }
+                        listOf(listOf("Сила", "Ловкость"), listOf("Телосложение", "Интеллект"), listOf("Мудрость", "Харизма")).forEach { pair -> Row { pair.forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "—") { edit(label) } } } } }
                         listOf("Пол", "Божество", "Возраст", "Языки", "Заметки").forEach { label -> EditorField(label, fields[label] ?: "Не задано") { edit(label) } }
                     }
                     2 -> {
-                        Row { listOf("КБ", "ОЗ").forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "—") { edit(label) } } }
+                        Row { listOf("КБ", "ОЗ").forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "—") { edit(label) } } } }
                         listOf("Стойкость", "Рефлекс", "Воля").forEach { BonusRow(it) }
                         EditorHeading("ВЛАДЕНИЕ ДОСПЕХАМИ")
                         Text("Лёгкие · Средние · Тяжёлые · Без доспехов")
@@ -75,7 +75,7 @@ import androidx.compose.ui.unit.dp
                         EditorField("Оружие", fields["Оружие"] ?: "Не добавлено") { edit("Оружие") }
                     }
                     4 -> {
-                        Row { listOf("ПМ", "ЗМ", "СМ", "ММ").forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "0") { edit(label) } } }
+                        Row { listOf("ПМ", "ЗМ", "СМ", "ММ").forEach { label -> Box(Modifier.weight(1f)) { EditorField(label, fields[label] ?: "0") { edit(label) } } } }
                         listOf("Снаряжение", "Контейнеры", "Формулы").forEach { label -> EditorField(label, fields[label] ?: "Не добавлено") { edit(label) } }
                         EditorHeading("ОСНОВНОЙ ИНВЕНТАРЬ")
                         Text("Нагрузка и пределы будут рассчитаны после подключения правил.", style = MaterialTheme.typography.bodySmall)
@@ -114,3 +114,4 @@ import androidx.compose.ui.unit.dp
     }
     HorizontalDivider()
 }
+
