@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 class MainActivity : ComponentActivity() { override fun onCreate(state: Bundle?) { super.onCreate(state); setContent { App() } } }
-data class Character(val name: String, val level: String, val ancestry: String, val heroClass: String)
+data class Character(val name: String, val level: String, val ancestry: String, val heroClass: String, val coreOnly: Boolean = false, val adventurePaths: Boolean = false)
 @Composable fun App() {
     val preferences = LocalContext.current.getSharedPreferences("characters", 0)
     val dark = remember { mutableStateOf(preferences.getBoolean("dark", true)) }
@@ -38,14 +38,16 @@ data class Character(val name: String, val level: String, val ancestry: String, 
                     val stored = runCatching { JSONArray(preferences.getString("items", "[]")) }.getOrElse { JSONArray() }
                     for (i in 0 until stored.length()) {
                         val item = stored.optJSONObject(i) ?: continue
-                        add(Character(item.optString("name"), item.optString("level", "1"), item.optString("ancestry"), item.optString("heroClass")))
+                        add(Character(item.optString("name"), item.optString("level", "1"), item.optString("ancestry"), item.optString("heroClass"), item.optBoolean("coreOnly"), item.optBoolean("adventurePaths")))
                     }
                 }
             }
+            val active = remember { mutableStateOf<Character?>(null) }
             when (screen.value) {
                 "home" -> HomeScreen(dark.value, { dark.value = it; preferences.edit().putBoolean("dark", it).apply() }) { screen.value = it }
                 "characters" -> CharactersScreen(characters, { screen.value = "create" }, { screen.value = "home" })
-                "create" -> CreateScreen({ character -> characters.add(character); preferences.edit().putString("items", JSONArray().apply { characters.forEach { put(JSONObject().put("name", it.name).put("level", it.level).put("ancestry", it.ancestry).put("heroClass", it.heroClass)) } }.toString()).apply(); screen.value = "characters" }, { screen.value = "home" })
+                "create" -> CreateScreen({ character -> characters.add(character); preferences.edit().putString("items", JSONArray().apply { characters.forEach { put(JSONObject().put("name", it.name).put("level", it.level).put("ancestry", it.ancestry).put("heroClass", it.heroClass).put("coreOnly", it.coreOnly).put("adventurePaths", it.adventurePaths)) } }.toString()).apply(); active.value = character; screen.value = "editor" }, { screen.value = "home" })
+                "editor" -> active.value?.let { CharacterSheet(it) { screen.value = "characters" } }
                 "library" -> LibraryScreen { screen.value = "home" }
                 else -> SettingsScreen(dark.value, { dark.value = it; preferences.edit().putBoolean("dark", it).apply() }) { screen.value = "home" }
             }
@@ -77,37 +79,25 @@ data class Character(val name: String, val level: String, val ancestry: String, 
 }
 
 @Composable private fun CreateScreen(save: (Character) -> Unit, back: () -> Unit) {
-    val name = remember { mutableStateOf("") }
-    val level = remember { mutableStateOf("1") }
-    val ancestry = remember { mutableStateOf("Человек") }
-    val heroClass = remember { mutableStateOf("Воин") }
-    val ancestryOpen = remember { mutableStateOf(false) }
-    val classOpen = remember { mutableStateOf(false) }
-    val ancestries = listOf("Человек", "Эльф", "Дворф", "Гном", "Полурослик")
-    val classes = listOf("Воин", "Волшебник", "Плут", "Жрец", "Рейнджер")
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
-        Text("Новый персонаж", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
-        Spacer(Modifier.height(16.dp))
-        OutlinedTextField(name.value, { name.value = it }, label = { Text("Имя") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Spacer(Modifier.height(10.dp))
-        OutlinedTextField(level.value, { level.value = it.filter(Char::isDigit) }, label = { Text("Уровень") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth(), singleLine = true)
-        Spacer(Modifier.height(10.dp))
-        Box {
-            OutlinedButton(onClick = { ancestryOpen.value = true }, modifier = Modifier.fillMaxWidth()) { Text("Происхождение: ${ancestry.value}") }
-            DropdownMenu(expanded = ancestryOpen.value, onDismissRequest = { ancestryOpen.value = false }) { ancestries.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { ancestry.value = item; ancestryOpen.value = false }) } }
-        }
-        Spacer(Modifier.height(10.dp))
-        Box {
-            OutlinedButton(onClick = { classOpen.value = true }, modifier = Modifier.fillMaxWidth()) { Text("Класс: ${heroClass.value}") }
-            DropdownMenu(expanded = classOpen.value, onDismissRequest = { classOpen.value = false }) { classes.forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { heroClass.value = item; classOpen.value = false }) } }
-        }
-        Spacer(Modifier.height(18.dp))
-        Button(onClick = { save(Character(name.value, level.value, ancestry.value, heroClass.value)) }, modifier = Modifier.fillMaxWidth(), enabled = name.value.isNotBlank()) { Text("Сохранить персонажа") }
-        Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = back) { Text("Отмена") }
-    }
+    val adventure = remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(onBack = back)
+    AlertDialog(
+        onDismissRequest = back,
+        title = { Text("НОВЫЙ ПЕРСОНАЖ") },
+        text = {
+            Column {
+                Text("Начните создание персонажа со всеми доступными вариантами или выберите только основные правила.")
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Checkbox(adventure.value, { adventure.value = it })
+                    Text("Включить материалы приключений?")
+                }
+                Text("Выбор правил сохраняется с персонажем. Полные каталоги будут подключены на этапе библиотек.", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = { TextButton(onClick = { save(Character("Неизвестный искатель приключений", "1", "Человек", "Воин", false, adventure.value)) }) { Text("Начать") } },
+        dismissButton = { TextButton(onClick = { save(Character("Неизвестный искатель приключений", "1", "Человек", "Воин", true, adventure.value)) }) { Text("Только основные правила") } }
+    )
 }
-
 @Composable private fun HomeScreen(dark: Boolean, changeTheme: (Boolean) -> Unit, open: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(22.dp)) {
         Spacer(Modifier.height(18.dp))
@@ -150,6 +140,8 @@ data class Character(val name: String, val level: String, val ancestry: String, 
         Spacer(Modifier.height(12.dp)); OutlinedButton(onClick = back) { Text("Назад") }
     }
 }
+
+
 
 
 
