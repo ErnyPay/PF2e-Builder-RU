@@ -89,7 +89,9 @@ import androidx.compose.ui.unit.dp
         }
     }
     editing?.let { label ->
-        AlertDialog(onDismissRequest = { editing = null }, title = { Text(label) }, text = {
+        if (label in listOf("Родословная", "Предыстория", "Класс", "Наследие", "Способность родословной", "Классовая способность")) {
+            SelectionScreen(label, fields[label].orEmpty(), { editing = null }, { fields[label] = it; editing = null })
+        } else AlertDialog(onDismissRequest = { editing = null }, title = { Text(label) }, text = {
             Column { Text("Ручной ввод для интерфейсного прототипа. Библиотеки выбора ещё не подключены.", style = MaterialTheme.typography.bodySmall); OutlinedTextField(draft, { draft = it }, modifier = Modifier.fillMaxWidth()) }
         }, confirmButton = { TextButton(onClick = { fields[label] = draft; editing = null }) { Text("Принять") } }, dismissButton = { TextButton(onClick = { editing = null }) { Text("Отмена") } })
     }
@@ -114,4 +116,5 @@ import androidx.compose.ui.unit.dp
     }
     HorizontalDivider()
 }
+
 
